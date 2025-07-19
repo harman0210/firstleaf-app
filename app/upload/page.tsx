@@ -16,7 +16,7 @@ import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/components/ui/use-toast"
 import dynamic from 'next/dynamic'
 
-const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor'), { ssr: false })
+const RichTextEditor = dynamic(() => import('@/compo/RichTextEditor'), { ssr: false })
 
 export default function UploadPage() {
   const { user } = useUser()
