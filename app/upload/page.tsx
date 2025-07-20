@@ -14,9 +14,12 @@ import { BookOpen, ArrowLeft, Upload } from "lucide-react"
 import { useUser } from "@/lib/useUser"
 import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/components/ui/use-toast"
-import dynamic from 'next/dynamic'
+import { useEditor, EditorContent } from "@tiptap/react"
+import StarterKit from "@tiptap/starter-kit"
+import dynamic from "next/dynamic"
 
-const RichTextEditor = dynamic(() => import('@/compo/RichTextEditor'), { ssr: false })
+// Adjust the path to your Editor component location:
+const RichTextEditor = dynamic(() => import("@/components/ui/Editor"), { ssr: false })
 
 export default function UploadPage() {
   const { user } = useUser()
@@ -25,7 +28,6 @@ export default function UploadPage() {
 
   const [formData, setFormData] = useState({
     title: "",
-    description: "",
     genre: "",
     coverImage: null as File | null,
     bookFile: null as File | null,
@@ -33,8 +35,18 @@ export default function UploadPage() {
     acceptTerms: false,
   })
 
+  const [description, setDescription] = useState("")
   const [loading, setLoading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: "",
+     immediatelyRender: false,
+    onUpdate: ({ editor }) => {
+      setDescription(editor.getHTML())
+    },
+  })
 
   const handleFileChange = (field: "coverImage" | "bookFile") => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null
@@ -44,7 +56,7 @@ export default function UploadPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const { title, description, genre, coverImage, bookFile, confirmOriginal, acceptTerms } = formData
+    const { title, genre, coverImage, bookFile, confirmOriginal, acceptTerms } = formData
 
     if (!title || !description || !genre || !coverImage || !bookFile || !confirmOriginal || !acceptTerms) {
       alert("Please complete all fields and agree to the terms.")
@@ -59,16 +71,12 @@ export default function UploadPage() {
 
     setLoading(true)
 
-    // Upload cover
-    const extension = coverImage.name.split(".").pop()
-    const fileName = `cover-${Date.now()}.${extension}`
+    const coverExt = coverImage.name.split(".").pop()
+    const coverFileName = `cover-${Date.now()}.${coverExt}`
+
     const { data: coverData, error: coverError } = await supabase.storage
       .from("covers")
-      .upload(fileName, coverImage, {
-        onUploadProgress: (progress) => {
-          setUploadProgress((progress.loaded / progress.total) * 100)
-        },
-      })
+      .upload(coverFileName, coverImage)
 
     if (coverError) {
       alert("Error uploading cover image: " + coverError.message)
@@ -76,10 +84,10 @@ export default function UploadPage() {
       return
     }
 
-    // Upload book file
+    const bookFileName = `book-${Date.now()}`
     const { data: bookData, error: bookError } = await supabase.storage
       .from("books")
-      .upload(`book-${Date.now()}`, bookFile)
+      .upload(bookFileName, bookFile)
 
     if (bookError) {
       alert("Error uploading book file: " + bookError.message)
@@ -87,7 +95,6 @@ export default function UploadPage() {
       return
     }
 
-    // Ensure author exists
     let { data: existingAuthor } = await supabase
       .from("authors")
       .select("id")
@@ -95,21 +102,19 @@ export default function UploadPage() {
       .single()
 
     if (!existingAuthor) {
-      const { error: authorInsertError } = await supabase.from("authors").insert([
-        {
-          user_id: userId,
-          name: user?.user_metadata?.username || "Anonymous",
-          avatar_url: user?.user_metadata?.avatar_url || "",
-          created_at: new Date().toISOString(),
-        },
-      ])
+      const { error: authorInsertError } = await supabase.from("authors").insert([{
+        user_id: userId,
+        name: user?.user_metadata?.username || "Anonymous",
+        avatar_url: user?.user_metadata?.avatar_url || "",
+        created_at: new Date().toISOString(),
+      }])
+
       if (authorInsertError) {
         alert("Error creating author: " + authorInsertError.message)
         setLoading(false)
         return
       }
 
-      // refetch after inserting
       const { data: newAuthor } = await supabase
         .from("authors")
         .select("id")
@@ -126,21 +131,18 @@ export default function UploadPage() {
       return
     }
 
-    // Insert book
-    const { error: insertError } = await supabase.from("books").insert([
-      {
-        title,
-        description,
-        genre,
-        author_id: authorId,
-        cover_url: `https://zqneqwqlbippqjkaggxc.supabase.co/storage/v1/object/public/covers/${fileName}`,
-        book_url: bookData.path,
-        created_at: new Date().toISOString(),
-        likes: 0,
-        reviews: 0,
-        rating: 0,
-      },
-    ])
+    const { error: insertError } = await supabase.from("books").insert([{
+      title,
+      description,
+      genre,
+      author_id: authorId,
+      cover_url: `https://zqneqwqlbippqjkaggxc.supabase.co/storage/v1/object/public/covers/${coverFileName}`,
+      book_url: bookData?.path ?? "",
+      created_at: new Date().toISOString(),
+      likes: 0,
+      reviews: 0,
+      rating: 0,
+    }])
 
     setLoading(false)
 
@@ -151,17 +153,19 @@ export default function UploadPage() {
         title: "Book uploaded successfully!",
         description: "Your book is now available in the library.",
       })
+
       setFormData({
         title: "",
-        description: "",
         genre: "",
         coverImage: null,
         bookFile: null,
         confirmOriginal: false,
         acceptTerms: false,
       })
+      setDescription("")
+      editor?.commands.setContent("")
 
-      router.push("/dashboard") // redirect if needed
+      router.push("/dashboard")
     }
   }
 
@@ -182,7 +186,7 @@ export default function UploadPage() {
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Publish Your Book</h1>
           <p className="text-gray-600 text-lg">Share your story with the world and get feedback from readers</p>
         </div>
-
+        
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -202,18 +206,18 @@ export default function UploadPage() {
                   required
                 />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="description">Description *</Label>
-                <RichTextEditor
-                  value={formData.description}
-                  onChange={(value) => setFormData({ ...formData, description: value })}
-                />
+                <Label>Description *</Label>
+                <div className="border rounded-md p-2 min-h-[150px] bg-white">
+                  {editor ? <EditorContent editor={editor} /> : "Loading editor..."}
+                </div>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="genre">Genre *</Label>
-                <Select value={formData.genre} onValueChange={(value) => setFormData({ ...formData, genre: value })}>
+                <Select
+                  value={formData.genre}
+                  onValueChange={(value: string) => setFormData({ ...formData, genre: value })}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a genre" />
                   </SelectTrigger>
@@ -262,7 +266,9 @@ export default function UploadPage() {
                   <Checkbox
                     id="confirm-original"
                     checked={formData.confirmOriginal}
-                    onCheckedChange={(checked) => setFormData({ ...formData, confirmOriginal: !!checked })}
+                    onCheckedChange={(checked: boolean) =>
+                      setFormData({ ...formData, confirmOriginal: !!checked })
+                    }
                     required
                   />
                   <Label htmlFor="confirm-original" className="text-sm leading-relaxed">
@@ -273,7 +279,9 @@ export default function UploadPage() {
                   <Checkbox
                     id="accept-terms"
                     checked={formData.acceptTerms}
-                    onCheckedChange={(checked) => setFormData({ ...formData, acceptTerms: !!checked })}
+                    onCheckedChange={(checked: boolean) =>
+                      setFormData({ ...formData, acceptTerms: !!checked })
+                    }
                     required
                   />
                   <Label htmlFor="accept-terms" className="text-sm leading-relaxed">
