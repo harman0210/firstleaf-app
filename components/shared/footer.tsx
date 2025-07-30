@@ -1,7 +1,7 @@
 // components/shared/footer.tsx
 'use client'
+import Link from 'next/link';
 
-import Link from "next/Link"
 
 export function Footer() {
   return (
