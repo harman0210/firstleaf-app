@@ -26,9 +26,9 @@ export const metadata: Metadata = {
 
   metadataBase: new URL("https://your-domain.com"), // ← replace with actual domain later
   icons: {
-    icon: "/logo.svg",
-    shortcut: "/logo.svg",
-    apple: "/logo.svg"
+    icon: "/fevicon.png",
+    shortcut: "logos/fevicon-g-wl.png",
+    apple: "/fevicon.png"
   },
   openGraph: {
     title: "FirstLeaf - Platform for New Authors",

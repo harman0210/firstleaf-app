@@ -116,7 +116,7 @@ export default function HeroSection() {
           </Button>
           <Link href="/upload" passHref>
             <Button className="bg-[#6b47dc] text-white px-6 py-3 rounded-full hover:shadow-xl hover:scale-105 transition transform duration-300">
-              Upload Your Book
+              Upload e-Book
             </Button>
           </Link>
           <Link href="/library" passHref>

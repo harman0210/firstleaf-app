@@ -12,14 +12,16 @@ export default function HowItWorks() {
           <Image src="/Novelist writing.gif" alt="Write" width={350} height={80} className="mx-auto mb-4" />
           <h3 className="text-xl font-semibold mb-2 text-black">Write Freely</h3>
           <p className="text-gray-600">
-            Create stories, poems, or books in a distraction-free editor designed for flow and creativity.
+          Create stories, poems, or books in a distraction-free editor. 
+          Save your drafts and come back anytime to complete them. When you're ready, easily share your work with others.
           </p>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
           <Image src="/reading-book.gif" alt="Read" width={350} height={80} className="mx-auto mb-4" />
           <h3 className="text-xl font-semibold mb-2 text-black">Read Deeply</h3>
           <p className="text-gray-600">
-            Discover writing that resonates. Follow authors you love and explore handpicked recommendations.
+            If you’re a book lover, this is made for you. 
+            Dive into any genre, in different languages, and discover awesome new writers anytime.
           </p>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>

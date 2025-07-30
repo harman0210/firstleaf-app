@@ -81,34 +81,34 @@ export function UserNavBar() {
   }
   return (
     <>
-      <header className="sticky top-0 z-50 bg-zinc-900/90 backdrop-blur border-b border-white/10 px-4 py-3">
+      <header className="sticky top-0 z-50 bg-white backdrop-blur border-b border-gray-400 px-4 py-3">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <Link href="/" className="flex items-center space-x-2">
-            <Image src="avatars/avatar7.png" alt="Logo" width={40} height={40} />
-            <span className="text-2xl font-bold text-emerald-400 hover:text-cyan-400">
+            <Image src="/logos/offical-logo-g-wl.png" alt="Logo" width={150} height={50} />
+           {/*} <span className="text-2xl font-bold text-emerald-400 hover:text-cyan-400">
               FirstLeaf
-            </span>
+            </span>*/}
           </Link>
 
           <div className="flex items-center gap-4">
             <button
               aria-label="Search"
               onClick={() => setSearchOpen(true)}
-              className="p-2 rounded-full text-zinc-300 hover:text-white transition-colors"
+              className="p-2 rounded-full text-gray-900 hover:text-black transition-colors"
             >
               <Search size={20} />
             </button>
-            <Button className="text-sm text-zinc-300 hover:text-white"
+            <Button variant="ghost" className="text-sm text-gray-900 hover:text-black"
               onClick={handleStartWriting}
             >
-              Write
+              ✍️ Write
             </Button>
-            <Link href="/library" className="text-sm text-zinc-300 hover:text-white">
+            <Link  href="/library" className="text-sm text-gray-900 hover:text-black">
               Library
             </Link>
             {user ? (
               <>
-                <Link href="/dashboard" className="text-sm text-zinc-300 hover:text-white">
+                <Link href="/dashboard" className="text-sm text-gray-900 hover:text-black">
                   Profile
                 </Link>
                 <Avatar className="h-8 w-8 bg-black-800 text-black border border-zinc-600 ">
@@ -119,12 +119,12 @@ export function UserNavBar() {
               </>
             ) : (
               <>
-                <button onClick={openModal} className="text-sm text-zinc-300 hover:text-white">
+                <button onClick={openModal} className="text-sm text-gray-900 hover:text-black">
                   Login
                 </button>
                 <button
                   onClick={openModal}
-                  className="text-sm text-zinc-300 hover:text-white"
+                  className="text-sm text-gray-900 hover:text-black"
                 >
                   Sign Up
                 </button>

@@ -117,7 +117,7 @@ export default function LibraryPage() {
           className="mb-8"
         >
           <h1 className="text-4xl font-extrabold text-gray-900 mb-4">
-            <span className="bg-gradient-to-r from-emerald-500 to-cyan-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-green-700 via-green-500 to-green-300 bg-clip-text text-transparent">
               Discover New Stories
             </span>
           </h1>
@@ -178,7 +178,7 @@ export default function LibraryPage() {
               <SelectItem value="satire">Satire</SelectItem>
               <SelectItem value="adventure">Adventure</SelectItem>
               <SelectItem value="literature">Literature</SelectItem>
-             <SelectItem value="other">Other</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
         </div>
