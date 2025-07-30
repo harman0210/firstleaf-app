@@ -1,0 +1,20 @@
+/* styles/pdf.css */
+
+.react-pdf__Page__annotations {
+  display: none;
+}
+
+.react-pdf__Page {
+  position: relative;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.react-pdf__Page__textContent {
+  color: inherit;
+  mix-blend-mode: normal;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  white-space: pre-wrap;
+}

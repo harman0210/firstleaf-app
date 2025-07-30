@@ -10,7 +10,7 @@ type Author = {
   id: string
   name: string
   bio?: string
-  profile_picture_url?: string
+  avatar_url?: string
 }
 
 export default function AuthorSpotlight() {
@@ -21,44 +21,58 @@ export default function AuthorSpotlight() {
     const fetchTopAuthor = async () => {
       const { data, error } = await supabase
         .from('authors')
-        .select('id, name, bio, profile_picture_url')
-        .order('total_likes', { ascending: false }) // or total_reviews
+        .select('id, name, bio, avatar_url')
+        .order('likes', { ascending: false })
         .limit(1)
-        .single()
 
-      if (!error && data) {
-        setAuthor(data)
+      if (!error && data && data.length > 0) {
+        setAuthor(data[0])
       }
     }
 
     fetchTopAuthor()
   }, [])
 
-if (!author) return (
-  <div className="text-center py-10 text-gray-500">No spotlight author found.</div>
-)
-
+  if (!author) {
+    return (
+      <div className="text-center py-10 text-gray-500 dark:text-gray-400">
+        No spotlight author found.
+      </div>
+    )
+  }
 
   return (
-    <section className="relative z-10 py-24 px-6 bg-white">
-      <h2 className="text-3xl font-serif font-bold mb-6 text-center text-gray-800">Author Spotlight</h2>
-      <div className="max-w-2xl mx-auto bg-gray-100 p-6 rounded-xl shadow-md">
-        <Image
-          src={author.profile_picture_url || '/author-placeholder.jpg'}
-          alt={author.name}
-          width={100}
-          height={100}
-          className="rounded-full mx-auto mb-4"
-        />
-        <h3 className="text-xl font-bold text-center mb-2">{author.name}</h3>
-        <p className="text-gray-600 text-center mb-4">
-          {author.bio || 'This author has touched many hearts with their writing.'}
-        </p>
-        <Button variant="outline" className="block mx-auto" onClick={() => router.push(`/author/${author.id}`)}>
-          View Profile
-        </Button>
+    <section className="relative z-10 py-24 px-6 bg-[#fdfcf9] dark:bg-[#121212]">
+      <div className="max-w-2xl mx-auto text-center">
+        <h2 className="text-3xl font-serif font-bold mb-8 text-gray-800 dark:text-gray-100">
+          Author Spotlight
+        </h2>
+
+        <div className="bg-white dark:bg-[#1c1c1e] border border-gray-200 dark:border-gray-700 rounded-xl p-8 shadow-md">
+          <Image
+            src={author.avatar_url || '/avatar/avatar.png'}
+            alt={author.name}
+            width={100}
+            height={100}
+            className="rounded-full mx-auto mb-4 object-cover border border-gray-300 dark:border-gray-600"
+          />
+
+          <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
+            {author.name}
+          </h3>
+
+          <p className="text-gray-600 dark:text-gray-300 text-sm italic mb-6">
+            {author.bio || 'This author has touched many hearts with their writing.'}
+          </p>
+
+   
+           <Button className="bg-[#6b47dc] text-white px-6 py-3 rounded-full hover:shadow-xl hover:scale-105 transition transform duration-300"
+            onClick={() => router.push(`/author/${author.id}`)}
+          >
+            View Profile
+          </Button>
+        </div>
       </div>
     </section>
   )
 }
-

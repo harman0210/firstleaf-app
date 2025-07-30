@@ -1,306 +1,257 @@
 "use client"
 
-import React, { useState } from "react"
-import Link from "next/link"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { BookOpen, ArrowLeft, Upload } from "lucide-react"
-import { useUser } from "@/lib/useUser"
-import { Progress } from "@/components/ui/progress"
+import { Loader2 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-import { useEditor, EditorContent } from "@tiptap/react"
-import StarterKit from "@tiptap/starter-kit"
-import dynamic from "next/dynamic"
+import Image from "next/image"
+import useAuthModal from "@/components/modals/AuthModal"
+import { Card } from "@/components/ui/card"
 
-// Adjust the path to your Editor component location:
-const RichTextEditor = dynamic(() => import("@/components/ui/Editor"), { ssr: false })
+const genres = ["fantasy", "sci-fi", "romance", "mystery", "thriller", "literary-fiction", "young-adult", "non-fiction", "other"]
 
 export default function UploadPage() {
-  const { user } = useUser()
   const router = useRouter()
   const { toast } = useToast()
+  const authModal = useAuthModal()
 
-  const [formData, setFormData] = useState({
-    title: "",
-    genre: "",
-    coverImage: null as File | null,
-    bookFile: null as File | null,
-    confirmOriginal: false,
-    acceptTerms: false,
-  })
+  const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [authorId, setAuthorId] = useState<string | null>(null)
+  const [form, setForm] = useState({ title: "", genre: "", language: "", description: "" })
+  const [coverPreview, setCoverPreview] = useState<string>("")
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [bookFile, setBookFile] = useState<File | null>(null)
 
-  const [description, setDescription] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
+  useEffect(() => {
+    const init = async () => {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser()
 
-  const editor = useEditor({
-    extensions: [StarterKit],
-    content: "",
-     immediatelyRender: false,
-    onUpdate: ({ editor }) => {
-      setDescription(editor.getHTML())
-    },
-  })
+      if (!user || error) {
 
-  const handleFileChange = (field: "coverImage" | "bookFile") => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null
-    setFormData((prev) => ({ ...prev, [field]: file }))
-  }
+        authModal.onOpen()
+        // router.push("/")
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    const { title, genre, coverImage, bookFile, confirmOriginal, acceptTerms } = formData
-
-    if (!title || !description || !genre || !coverImage || !bookFile || !confirmOriginal || !acceptTerms) {
-      alert("Please complete all fields and agree to the terms.")
-      return
-    }
-
-    const userId = user?.id
-    if (!userId) {
-      alert("User not authenticated")
-      return
-    }
-
-    setLoading(true)
-
-    const coverExt = coverImage.name.split(".").pop()
-    const coverFileName = `cover-${Date.now()}.${coverExt}`
-
-    const { data: coverData, error: coverError } = await supabase.storage
-      .from("covers")
-      .upload(coverFileName, coverImage)
-
-    if (coverError) {
-      alert("Error uploading cover image: " + coverError.message)
-      setLoading(false)
-      return
-    }
-
-    const bookFileName = `book-${Date.now()}`
-    const { data: bookData, error: bookError } = await supabase.storage
-      .from("books")
-      .upload(bookFileName, bookFile)
-
-    if (bookError) {
-      alert("Error uploading book file: " + bookError.message)
-      setLoading(false)
-      return
-    }
-
-    let { data: existingAuthor } = await supabase
-      .from("authors")
-      .select("id")
-      .eq("user_id", userId)
-      .single()
-
-    if (!existingAuthor) {
-      const { error: authorInsertError } = await supabase.from("authors").insert([{
-        user_id: userId,
-        name: user?.user_metadata?.username || "Anonymous",
-        avatar_url: user?.user_metadata?.avatar_url || "",
-        created_at: new Date().toISOString(),
-      }])
-
-      if (authorInsertError) {
-        alert("Error creating author: " + authorInsertError.message)
-        setLoading(false)
         return
       }
 
-      const { data: newAuthor } = await supabase
+      setUserId(user.id)
+
+      const { data: author } = await supabase
         .from("authors")
-        .select("id")
-        .eq("user_id", userId)
+        .select("*")
+        .eq("user_id", user.id)
         .single()
 
-      existingAuthor = newAuthor
-    }
+      if (author) {
+        setAuthorId(author.id)
+      } else {
+        const { data: newAuthor, error: createErr } = await supabase
+          .from("authors")
+          .insert([
+            {
+              user_id: user.id,
+              name: user.user_metadata.name || user.email,
+              avatar_url: user.user_metadata.avatar_url || null,
+            },
+          ])
+          .select()
+          .single()
 
-    const authorId = existingAuthor?.id
-    if (!authorId) {
-      alert("Could not resolve author ID")
+        if (createErr || !newAuthor) {
+          toast({ title: "Failed to create author", variant: "destructive" })
+          return
+        }
+
+        setAuthorId(newAuthor.id)
+      }
+
       setLoading(false)
-      return
     }
 
-    const { error: insertError } = await supabase.from("books").insert([{
-      title,
-      description,
-      genre,
-      author_id: authorId,
-      cover_url: `https://zqneqwqlbippqjkaggxc.supabase.co/storage/v1/object/public/covers/${coverFileName}`,
-      book_url: bookData?.path ?? "",
-      created_at: new Date().toISOString(),
-      likes: 0,
-      reviews: 0,
-      rating: 0,
-    }])
+    init()
+  }, [])
 
-    setLoading(false)
-
-    if (insertError) {
-      alert("Error saving book details: " + insertError.message)
-    } else {
-      toast({
-        title: "Book uploaded successfully!",
-        description: "Your book is now available in the library.",
-      })
-
-      setFormData({
-        title: "",
-        genre: "",
-        coverImage: null,
-        bookFile: null,
-        confirmOriginal: false,
-        acceptTerms: false,
-      })
-      setDescription("")
-      editor?.commands.setContent("")
-
-      router.push("/dashboard")
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] || null
+    if (f) {
+      setCoverFile(f)
+      setCoverPreview(URL.createObjectURL(f))
     }
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="border-b bg-white sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <ArrowLeft className="h-5 w-5 text-gray-600" />
-            <BookOpen className="h-8 w-8 text-emerald-600" />
-            <span className="text-2xl font-bold text-gray-900">FirstLeaf</span>
-          </Link>
-        </div>
-      </nav>
+  const handleBookChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] || null
+    if (f) {
+      setBookFile(f)
+    }
+  }
 
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Publish Your Book</h1>
-          <p className="text-gray-600 text-lg">Share your story with the world and get feedback from readers</p>
-        </div>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Upload className="h-5 w-5" />
-              <span>Book Details</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="title">Book Title *</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Enter your book title"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Description *</Label>
-                <div className="border rounded-md p-2 min-h-[150px] bg-white">
-                  {editor ? <EditorContent editor={editor} /> : "Loading editor..."}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="genre">Genre *</Label>
-                <Select
-                  value={formData.genre}
-                  onValueChange={(value: string) => setFormData({ ...formData, genre: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a genre" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fantasy">Fantasy</SelectItem>
-                    <SelectItem value="sci-fi">Science Fiction</SelectItem>
-                    <SelectItem value="romance">Romance</SelectItem>
-                    <SelectItem value="mystery">Mystery</SelectItem>
-                    <SelectItem value="thriller">Thriller</SelectItem>
-                    <SelectItem value="literary-fiction">Literary Fiction</SelectItem>
-                    <SelectItem value="young-adult">Young Adult</SelectItem>
-                    <SelectItem value="non-fiction">Non-Fiction</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+  const handleUpload = async () => {
+    if (!authorId || !bookFile) {
+      return toast({
+        title: "Missing required fields",
+        description: "Make sure to select a book file and fill all inputs.",
+        variant: "destructive",
+      })
+    }
 
-              <div className="space-y-2">
-                <Label htmlFor="cover-upload">Cover Image *</Label>
-                <Input
-                  id="cover-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange("coverImage")}
-                  required
-                />
-              </div>
+    setLoading(true)
+    let coverUrl = ""
+    let bookUrl = ""
 
-              <div className="space-y-2">
-                <Label htmlFor="book-upload">Book File *</Label>
-                <Input
-                  id="book-upload"
-                  type="file"
-                  accept=".pdf,.txt,.doc,.docx"
-                  onChange={handleFileChange("bookFile")}
-                  required
-                />
-              </div>
+    if (coverFile) {
+      const ext = coverFile.name.split(".").pop()
+      const filename = `cover-${Date.now()}.${ext}`
 
-              {uploadProgress > 0 && (
-                <Progress value={uploadProgress} className="w-full mt-2" />
-              )}
+      const { error: uploadErr } = await supabase.storage
+        .from("covers")
+        .upload(filename, coverFile)
 
-              <div className="space-y-4 pt-4 border-t">
-                <div className="flex items-start space-x-3">
-                  <Checkbox
-                    id="confirm-original"
-                    checked={formData.confirmOriginal}
-                    onCheckedChange={(checked: boolean) =>
-                      setFormData({ ...formData, confirmOriginal: !!checked })
-                    }
-                    required
-                  />
-                  <Label htmlFor="confirm-original" className="text-sm leading-relaxed">
-                    I confirm this is my original work and is not AI-generated or plagiarized content
-                  </Label>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Checkbox
-                    id="accept-terms"
-                    checked={formData.acceptTerms}
-                    onCheckedChange={(checked: boolean) =>
-                      setFormData({ ...formData, acceptTerms: !!checked })
-                    }
-                    required
-                  />
-                  <Label htmlFor="accept-terms" className="text-sm leading-relaxed">
-                    I agree to the <Link href="/terms" className="text-emerald-600 hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-emerald-600 hover:underline">Privacy Policy</Link>
-                  </Label>
-                </div>
-              </div>
+      if (uploadErr) {
+        setLoading(false)
+        return toast({ title: "Cover upload failed", description: uploadErr.message, variant: "destructive" })
+      }
 
-              <Button
-                type="submit"
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-lg py-3"
-                disabled={loading || !formData.confirmOriginal || !formData.acceptTerms}
-              >
-                {loading ? "Publishing..." : "Publish Book"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+      coverUrl = `https://zqneqwqlbippqjkaggxc.supabase.co/storage/v1/object/public/covers/${filename}`
+    }
+
+    const ext = bookFile.name.split(".").pop()
+    const bookFilename = `book-${Date.now()}.${ext}`
+
+    const { error: bookUploadErr } = await supabase.storage
+      .from("books")
+      .upload(bookFilename, bookFile)
+
+    if (bookUploadErr) {
+      setLoading(false)
+      return toast({ title: "Book upload failed", description: bookUploadErr.message, variant: "destructive" })
+    }
+
+    bookUrl = `https://zqneqwqlbippqjkaggxc.supabase.co/storage/v1/object/public/books/${bookFilename}`
+
+    const { error: bookInsertErr } = await supabase.from("books").insert([
+      {
+        title: form.title,
+        genre: form.genre,
+        language: form.language,
+        description: form.description,
+        cover_url: coverUrl,
+        book_url: bookUrl,
+        author_id: authorId,
+      },
+    ])
+
+    setLoading(false)
+
+    if (bookInsertErr) {
+      return toast({ title: "Upload failed", description: bookInsertErr.message, variant: "destructive" })
+    }
+
+    toast({ title: "Book uploaded successfully" })
+    router.push("/dashboard")
+  }
+
+  if (loading) {
+    return (
+      <div className="p-10 flex justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
       </div>
+    )
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto p-6">
+      <Card className="p-6 shadow-xl border border-emerald-300 rounded-2xl space-y-6">
+        <h1 className="text-3xl font-bold text-center text-emerald-700">📚 Upload Your Book</h1>
+        <p className="text-gray-600 text-lg">Share your story with the world and get feedback from readers</p>
+
+        <div className="space-y-2">
+          <Label>Title</Label>
+          <Input
+            placeholder="Enter book title"
+            value={form.title}
+            onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Language</Label>
+          <Select
+            value={form.language}
+            onValueChange={(v) => setForm((prev) => ({ ...prev, language: v }))}
+          >  <SelectTrigger>
+              <SelectValue placeholder="Language" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Languages</SelectItem>
+              <SelectItem value="punjabi">Punjabi</SelectItem>
+              <SelectItem value="english">English</SelectItem>
+              <SelectItem value="hindi">Hindi</SelectItem>
+              <SelectItem value="spanish">Spanish</SelectItem>
+              <SelectItem value="telgu">Telgu</SelectItem>
+              <SelectItem value="gujarati">Gujarati</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Genre</Label>
+          <Select value={form.genre} onValueChange={(v) => setForm((prev) => ({ ...prev, genre: v }))}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select genre" />
+            </SelectTrigger>
+            <SelectContent>
+              {genres.map((g) => (
+                <SelectItem key={g} value={g}>{g}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Description</Label>
+          <Textarea
+            placeholder="Write a brief description..."
+            value={form.description}
+            onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Cover Image</Label>
+          {coverPreview && (
+            <Image
+              src={coverPreview}
+              alt="Cover Preview"
+              width={120}
+              height={180}
+              className="rounded border my-2"
+            />
+          )}
+          <Input type="file" accept="image/*" onChange={handleCoverChange} />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Book File (.pdf/.epub)</Label>
+          <Input type="file" accept=".pdf,.epub" onChange={handleBookChange} />
+        </div>
+
+        <Button
+          onClick={handleUpload}
+          disabled={loading}
+          className="w-full bg-gradient-to-r from-emerald-500 to-emerald-700 hover:from-emerald-600 hover:to-emerald-800 text-white shadow-lg"
+        >
+          {loading ? <Loader2 className="animate-spin mr-2" /> : "📤 Upload Book"}
+        </Button>
+      </Card>
     </div>
   )
 }

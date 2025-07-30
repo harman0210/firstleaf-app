@@ -1,52 +1,40 @@
-// lib/auth-context.tsx
+// lib/auth-context.ts
 "use client"
 
 import { createContext, useContext, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabaseClient"
 
-type User = {
-  id: string
-  email: string
-} | null
-
-const AuthContext = createContext<{ user: User, loading: boolean }>({ user: null, loading: true })
+const AuthContext = createContext({ user: null, logout: async () => {} })
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(null)
 
   useEffect(() => {
-    const getSession = async () => {
-      const {
-        data: { session },
-        error
-      } = await supabase.auth.getSession()
-
-      if (session?.user) {
-        setUser({ id: session.user.id, email: session.user.email ?? "" })
-      } else {
-        setUser(null)
-      }
-
-      setLoading(false)
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
     }
+    getUser()
 
-    getSession()
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser({ id: session.user.id, email: session.user.email ?? "" })
-      } else {
-        setUser(null)
-      }
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null)
     })
 
     return () => {
-      listener?.subscription.unsubscribe()
+      listener.subscription.unsubscribe()
     }
   }, [])
 
-  return <AuthContext.Provider value={{ user, loading }}>{children}</AuthContext.Provider>
+  const logout = async () => {
+    await supabase.auth.signOut()
+    window.location.href = "/" // or "/auth"
+  }
+
+  return (
+    <AuthContext.Provider value={{ user, logout }}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export const useAuth = () => useContext(AuthContext)

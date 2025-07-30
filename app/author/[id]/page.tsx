@@ -1,6 +1,5 @@
 "use client"
-//import Head from "next/head" 
-//<Head><title>{author.name} | FirstLeaf Author</title></Head>
+
 import { useParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import Link from "next/link"
@@ -21,97 +20,108 @@ import {
   Award,
 } from "lucide-react"
 
-
 export default function AuthorPage() {
   const params = useParams()
   const id = params?.id as string
 
   const [author, setAuthor] = useState<any>(null)
   const [authorBooks, setAuthorBooks] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!id) return
+
     const fetchAuthorProfile = async () => {
+      setLoading(true)
+
       const { data: authorData, error: authorError } = await supabase
         .from("authors")
         .select("*")
         .eq("id", id)
         .single()
-      if (!authorData) {
-        console.log("Page params:", params)
-        console.log("Resolved ID:", id)
 
+      if (!authorData || authorError) {
         console.error("Author not found. Possibly invalid ID:", id)
+        setLoading(false)
         return
       }
 
-
       const { data: booksData, error: booksError } = await supabase
         .from("books")
-        .select(`id, title, genre, description, cover_url, book_url, created_at,
-                 likes (id), reviews (id, rating)`)
+        .select(`id, title, genre, description, cover_url, book_url, created_at`)
         .eq("author_id", id)
 
       if (booksError) {
         console.error("Error fetching books:", booksError)
+        setLoading(false)
         return
       }
 
-      let totalLikes = 0, totalReviews = 0, totalRating = 0, totalRatingCount = 0
+      const bookStats = await Promise.all(
+        booksData.map(async (book) => {
+          const [{ data: likes = [] }, { data: reviews = [] }] = await Promise.all([
+            supabase.from("likes").select("id").eq("book_id", book.id),
+            supabase.from("reviews").select("rating").eq("book_id", book.id),
+          ])
 
-      const mappedBooks = booksData.map((book) => {
-        const likes = book.likes?.length || 0
-        const reviews = book.reviews || []
-        const ratingSum = reviews.reduce((acc, r) => acc + r.rating, 0)
-        const ratingAvg = reviews.length > 0 ? (ratingSum / reviews.length).toFixed(1) : 0
+          const ratingSum = reviews.reduce((acc, r) => acc + r.rating, 0)
+          const avgRating = reviews.length > 0 ? (ratingSum / reviews.length).toFixed(1) : "0"
 
-        totalLikes += likes
-        totalReviews += reviews.length
-        totalRating += ratingSum
-        totalRatingCount += reviews.length
+          return {
+            ...book,
+            likes: likes.length,
+            reviews: reviews.length,
+            rating: avgRating,
+          }
+        })
+      )
 
-        return {
-          id: book.id,
-          title: book.title,
-          genre: book.genre,
-          description: book.description,
-          cover: `https://zqneqwqlbippqjkaggxc.supabase.co/storage/v1/object/public/covers/${book.cover_url}`,
-          rating: ratingAvg,
-          reviews: reviews.length,
-          likes,
-          publishDate: book.created_at?.slice(0, 10),
-        }
-      })
+      const totalLikes = bookStats.reduce((acc, book) => acc + book.likes, 0)
+      const totalReviews = bookStats.reduce((acc, book) => acc + book.reviews, 0)
+      const totalRating = bookStats.reduce((acc, book) => acc + parseFloat(book.rating) * book.reviews, 0)
+      const totalRatingCount = bookStats.reduce((acc, book) => acc + book.reviews, 0)
 
-      const avgRating = totalRatingCount > 0 ? (totalRating / totalRatingCount).toFixed(1) : 0
+      const avgRating = totalRatingCount > 0 ? (totalRating / totalRatingCount).toFixed(1) : "0"
+
+      const avatarList = [
+        "/avatars/avatar5.png",
+        "/avatars/avatar2.png",
+      ]
+
+      const randomAvatar = avatarList[Math.floor(Math.random() * avatarList.length)]
 
       setAuthor({
         id: authorData.id,
         name: authorData.name,
-        avatar: authorData.avatar_url || "/placeholder.svg",
+        avatar: authorData.avatar_url || randomAvatar,
         bio: authorData.bio || "This author hasn't added a bio yet.",
         location: authorData.location || "Unknown",
         joinDate: new Date(authorData.created_at).toLocaleDateString(undefined, {
           year: "numeric",
           month: "long",
         }),
-        badges: [], // Optional dynamic badges
+        badges: [],
         stats: {
-          totalBooks: booksData.length,
+          totalBooks: bookStats.length,
           totalLikes,
           totalReviews,
           avgRating,
         },
       })
 
-      setAuthorBooks(mappedBooks)
+      setAuthorBooks(bookStats)
+      setLoading(false)
     }
 
     fetchAuthorProfile()
   }, [id])
 
-  if (!author) {
+  if (loading) {
     return <div className="p-6 text-center text-gray-500">Loading author profile...</div>
+  }
+
+  if (!author) {
+    return <div className="p-6 text-center text-gray-500">Author not found.</div>
   }
 
   return (
@@ -186,7 +196,7 @@ export default function AuthorPage() {
             {authorBooks.map((book) => (
               <Card key={book.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="aspect-[3/4] relative">
-                  <Image src={book.cover} alt={book.title} fill className="object-cover" />
+                  <Image src={book.cover_url ? `${book.cover_url}` : "/placeholder.svg"} alt={book.title} fill className="object-cover" />
                 </div>
                 <CardContent className="p-4">
                   <Badge variant="secondary" className="mb-2">{book.genre}</Badge>

@@ -1,0 +1,90 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useParams } from "next/navigation"
+import { supabase } from "@/lib/supabaseClient"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Textarea } from "@/components/ui/textarea"
+
+interface Chapter {
+  id: string
+  book_id: string
+  title: string
+  content: string
+  position: number
+}
+
+export default function WriteChaptersPage() {
+  const { id: book_id } = useParams()
+  const [chapters, setChapters] = useState<Chapter[]>([])
+  const [newTitle, setNewTitle] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!book_id) return
+    fetchChapters()
+  }, [book_id])
+
+  async function fetchChapters() {
+    const { data, error } = await supabase
+      .from("chapters")
+      .select("*")
+      .eq("book_id", book_id)
+      .order("position")
+    if (data) setChapters(data)
+  }
+
+  async function handleAddChapter() {
+    if (!newTitle.trim()) return
+    setLoading(true)
+    const { data, error } = await supabase
+      .from("chapters")
+      .insert([{ book_id, title: newTitle, content: "", position: chapters.length }])
+      .select()
+      .single()
+    if (data) setChapters([...chapters, data])
+    setNewTitle("")
+    setLoading(false)
+  }
+
+  async function updateChapterContent(id: string, content: string) {
+    setChapters((prev) =>
+      prev.map((ch) => (ch.id === id ? { ...ch, content } : ch))
+    )
+    await supabase.from("chapters").update({ content }).eq("id", id)
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto p-4 space-y-6">
+      <h1 className="text-2xl font-bold">Write Chapters</h1>
+      <div className="flex gap-2">
+        <Input
+          placeholder="Chapter title"
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+        />
+        <Button onClick={handleAddChapter} disabled={loading}>
+          Add Chapter
+        </Button>
+      </div>
+
+      {chapters.map((chapter, index) => (
+        <Card key={chapter.id} className="border border-gray-200">
+          <CardHeader className="font-semibold">
+            Chapter {index + 1}: {chapter.title}
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              className="w-full min-h-[200px]"
+              value={chapter.content}
+              onChange={(e) => updateChapterContent(chapter.id, e.target.value)}
+              placeholder="Start writing..."
+            />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}

@@ -9,6 +9,8 @@ import AuthorSpotlight from '@/components/home/AuthorSpotlight'
 import MissionSection from '@/components/home/MissionSection'
 import HowItWorks from '@/components/home/HowItWorks'
 import Testimonials from '@/components/home/Testimonials'
+import LanguagesSection from '@/components/home/LanguagesSection'
+import AuthModal from '@/components/modals/AuthModal'
 
 export default function HomePage() {
   const [prompt, setPrompt] = useState('')
@@ -29,8 +31,9 @@ export default function HomePage() {
     <main className="relative overflow-hidden transition-colors duration-1000" style={{ backgroundColor: bgColor }}>
       <HeroSection />
       <FeaturedStories />
+        <LanguagesSection />
       <GenresSection />
-      <WritingPrompt prompt={prompt} />
+      <WritingPrompt/>
       <AuthorSpotlight />
       <MissionSection />
       <HowItWorks />

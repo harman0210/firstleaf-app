@@ -14,11 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import {
-  Heart,
-  MessageSquare,
-} from "lucide-react";
+import { Heart, MessageSquare } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function LibraryPage() {
@@ -27,35 +23,57 @@ export default function LibraryPage() {
   const [books, setBooks] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState("likes");
   const [selectedGenre, setSelectedGenre] = useState("all");
+  const languageFromURL = searchParams.get("language") || "all";
+  const [selectedLanguage, setSelectedLanguage] = useState("all");
 
   useEffect(() => {
     setSelectedGenre(genreFromURL);
   }, [genreFromURL]);
 
   useEffect(() => {
+    setSelectedGenre(genreFromURL);
+    setSelectedLanguage(languageFromURL);
+  }, [genreFromURL, languageFromURL]);
+
+  useEffect(() => {
     async function fetchBooks() {
-      const { data, error } = await supabase
+      // Fetch books with author
+      const { data: booksData, error } = await supabase
         .from("books")
         .select(`
-          id, title, description, genre, cover_url, created_at, author_id,
-          authors:author_id ( name ),
-          likes ( id ),
-          reviews ( id )
+          id, title, description, genre, cover_url, language, created_at, author_id,
+          authors:author_id ( name )
         `);
 
       if (error) {
         console.error("Supabase fetch error:", error.message);
-      } else {
-        const formatted = data.map((book) => ({
-          ...book,
-          author: book.authors?.name || "Unknown",
-          likes: book.likes?.length || 0,
-          reviews: book.reviews?.length || 0,
-        }));
-        setBooks(formatted);
+        return;
       }
+
+      // Fetch likes and reviews separately
+      const { data: likesData } = await supabase.from("likes").select("book_id");
+      const { data: reviewsData } = await supabase.from("reviews").select("book_id");
+
+      const likesCountMap = likesData?.reduce((acc, like) => {
+        acc[like.book_id] = (acc[like.book_id] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const reviewsCountMap = reviewsData?.reduce((acc, review) => {
+        acc[review.book_id] = (acc[review.book_id] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const formatted = booksData?.map((book) => ({
+        ...book,
+        author: book.authors?.name || "Unknown",
+        likes: likesCountMap?.[book.id] || 0,
+        reviews: reviewsCountMap?.[book.id] || 0,
+      }));
+
+      setBooks(formatted || []);
     }
-    
+
     fetchBooks();
   }, []);
 
@@ -72,12 +90,18 @@ export default function LibraryPage() {
     }
   });
 
-  const filteredBooks =
-    selectedGenre === "all"
-      ? sortedBooks
-      : sortedBooks.filter(
-          (book) => book.genre?.toLowerCase() === selectedGenre
-        );
+  const filteredBooks = sortedBooks.filter((book) => {
+    const genreMatch =
+      selectedGenre === "all" ||
+      book.genre?.toLowerCase() === selectedGenre;
+
+    const languageMatch =
+      selectedLanguage === "all" ||
+      book.language?.toLowerCase() === selectedLanguage;
+
+    return genreMatch && languageMatch;
+  });
+
 
   return (
     <div className="relative min-h-screen bg-gray-50 overflow-hidden">
@@ -104,7 +128,7 @@ export default function LibraryPage() {
 
         <div className="flex flex-col sm:flex-row gap-4 mb-8">
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-full sm:w-48">
+            <SelectTrigger className="w-full sm:w-48 bg-white text-gray-900">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
@@ -113,17 +137,48 @@ export default function LibraryPage() {
               <SelectItem value="newest">Newest</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+            <SelectTrigger className="w-full sm:w-48 bg-white text-gray-900">
+              <SelectValue placeholder="Language" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Languages</SelectItem>
+              <SelectItem value="punjabi">Punjabi</SelectItem>
+              <SelectItem value="english">English</SelectItem>
+              <SelectItem value="hindi">Hindi</SelectItem>
+              <SelectItem value="spanish">Spanish</SelectItem>
+              <SelectItem value="telgu">Telgu</SelectItem>
+              <SelectItem value="gujarati">Gujarati</SelectItem>
+            </SelectContent>
+          </Select>
 
           <Select value={selectedGenre} onValueChange={setSelectedGenre}>
-            <SelectTrigger className="w-full sm:w-48">
+            <SelectTrigger className="w-full sm:w-48 bg-white text-gray-900">
               <SelectValue placeholder="Genre" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Genres</SelectItem>
               <SelectItem value="fantasy">Fantasy</SelectItem>
-              <SelectItem value="sci-fi">Sci-Fi</SelectItem>
+              <SelectItem value="sci-Fi">Sci-Fi</SelectItem>
               <SelectItem value="romance">Romance</SelectItem>
-              <SelectItem value="literary fiction">Literary Fiction</SelectItem>
+              <SelectItem value="fiction">Fiction</SelectItem>
+              <SelectItem value="mystery">Mystery</SelectItem>
+              <SelectItem value="horror">Horror</SelectItem>
+              <SelectItem value="poetry">Poetry</SelectItem>
+              <SelectItem value="non-fiction">Non-Fiction</SelectItem>
+              <SelectItem value="thriller">Thriller</SelectItem>
+              <SelectItem value="drama">Drama</SelectItem>
+              <SelectItem value="adult">Adult</SelectItem>
+              <SelectItem value="folklore">Folklore</SelectItem>
+              <SelectItem value="psychology">Psychology</SelectItem>
+              <SelectItem value="memoir">Memoir</SelectItem>
+              <SelectItem value="spiritual">Spiritual</SelectItem>
+              <SelectItem value="family">Family</SelectItem>
+              <SelectItem value="nostalgia">Nostalgia</SelectItem>
+              <SelectItem value="satire">Satire</SelectItem>
+              <SelectItem value="adventure">Adventure</SelectItem>
+              <SelectItem value="literature">Literature</SelectItem>
+             <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -148,19 +203,22 @@ export default function LibraryPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
             >
-              <Card className="overflow-hidden hover:shadow-xl transition-shadow group">
+              <Card className="overflow-hidden hover:shadow-xl hover:border-emerald-400 border transition-all transform hover:-translate-y-1 group">
                 <div className="aspect-[3/4] relative">
                   <Image
                     src={book.cover_url || "/placeholder.svg"}
                     alt={book.title}
                     fill
-                    className="object-cover"
+                    className="object-cover rounded-t-lg"
                   />
                 </div>
                 <CardContent className="p-4">
-                  <Badge variant="secondary" className="mb-2">
+                  <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full mb-2 inline-block">
+                    {book.language}
+                  </span>
+                  <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full mb-2 inline-block ml-4">
                     {book.genre}
-                  </Badge>
+                  </span>
                   <h3 className="font-semibold text-lg mb-1 line-clamp-2">
                     {book.title}
                   </h3>
@@ -194,6 +252,12 @@ export default function LibraryPage() {
             </motion.div>
           ))}
         </motion.div>
+
+        {filteredBooks.length === 0 && (
+          <div className="text-center text-gray-500 py-20">
+            <p className="text-lg">📚 No books found. Try a different filter!</p>
+          </div>
+        )}
       </div>
     </div>
   );

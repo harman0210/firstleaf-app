@@ -1,5 +1,4 @@
-'use client'
-
+"use client"
 import { useEffect, useState, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
@@ -8,14 +7,19 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Slider } from '@/components/ui/slider'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
+import { toast } from '@/components/ui/use-toast'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+
+//import  PdfViewer  from '@/components/PdfViewer'
+import dynamic from 'next/dynamic'
+//const PdfViewer = dynamic(() => import('@/components/PdfViewer'), { ssr: false })
 import {
   BookOpen,
   Settings,
   Heart,
   MessageSquare,
   Share2,
-  Bookmark,
+  //  Bookmark,
   ArrowLeft,
   ArrowRight,
   Sun,
@@ -61,17 +65,11 @@ interface Book {
     avatar_url: string
   }
   likes: number
-  views: number
-  chapters: Chapter[]
+  reviews: number
+  // chapters: Chapter[]
   created_at: string
 }
 
-interface Chapter {
-  id: string
-  title: string
-  content: string
-  chapter_number: number
-}
 
 interface Comment {
   id: string
@@ -87,28 +85,26 @@ interface Comment {
 export default function ReadPage() {
   const router = useRouter()
   const { id } = useParams()
+
   const [book, setBook] = useState<Book | null>(null)
-  const [currentChapter, setCurrentChapter] = useState(0)
+  // const [currentChapter, setCurrentChapter] = useState(0)
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [isLiked, setIsLiked] = useState(false)
-  const [isBookmarked, setIsBookmarked] = useState(false)
-  const [comments, setComments] = useState<Comment[]>([])
+  //  const [isBookmarked, setIsBookmarked] = useState(false)
+  const [reviews, setreviews] = useState<Comment[]>([])
   const [newComment, setNewComment] = useState('')
-  const [showComments, setShowComments] = useState(false)
-  
+  const [showreviews, setShowreviews] = useState(false)
+  const [readingSession, setReadingSession] = useState<{ id: string; started_at: string } | null>(null);
+
+
   // Reading preferences
   const [fontSize, setFontSize] = useState(16)
   const [fontFamily, setFontFamily] = useState('serif')
   const [theme, setTheme] = useState('light')
   const [lineHeight, setLineHeight] = useState(1.6)
   const [readingProgress, setReadingProgress] = useState(0)
-  
-  // Text-to-speech
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [speechRate, setSpeechRate] = useState(1)
-  const speechRef = useRef<SpeechSynthesisUtterance | null>(null)
-  
+
   // Reading analytics
   const [readingTime, setReadingTime] = useState(0)
   const [wordsRead, setWordsRead] = useState(0)
@@ -116,163 +112,260 @@ export default function ReadPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session) {
-        router.push('/login')
-        return
+        router.push("/");
+        return;
       }
-      setUser(session.user)
-      await fetchBook()
-    }
+
+      setUser(session.user);
+
+      // ✅ Count only 1 view per user/book
+      const sessionId = await startReadingSession(session.user.id, id as string);
+      setReadingSession({ id: sessionId, started_at: new Date().toISOString() });
+
+      await fetchBook();
+    };
+
     checkAuth()
   }, [id, router])
 
+
+  // Track reading time
+  async function startReadingSession(userId: string, bookId: string) {
+    const { data: existing, error } = await supabase
+      .from('reading_sessions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('book_id', bookId)
+      .maybeSingle();
+
+    if (existing) {
+      // session exists, don't insert a new view
+      console.log('View already exists, skipping insert');
+      return existing.id;
+    } else {
+      const { data, error: insertError } = await supabase
+        .from('reading_sessions')
+        .insert({
+          user_id: userId,
+          book_id: bookId,
+          started_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (insertError) console.error('Insert error:', insertError);
+      return data?.id;
+    }
+  }
+
+  const endReadingSession = async () => {
+    if (!readingSession?.id) return;
+    const updatedSeconds = readingSeconds;
+
+    const { error } = await supabase
+      .from("reading_sessions")
+      .update({
+        duration: updatedSeconds,
+        ended_at: new Date().toISOString(),
+      })
+      .eq("id", readingSession.id);
+
+    if (error) {
+      console.error("Failed to end reading session:", error);
+    }
+  };
+
+
+
+
+  const params = useParams();
+  const bookId = params?.id;
+
+  const fetchReadingStats = async () => {
+    if (!bookId) {
+      console.error('bookId is missing');
+
+      return;
+    }
+    const { count } = await supabase
+      .from('reading_sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('book_id', bookId);
+
+    const viewsCount = count || 0;
+
+    const { data: durations, error: durationError } = await supabase
+      .from('reading_sessions')
+      .select('duration')
+      .eq('book_id', bookId)
+      .not('ended_at', 'is', null);
+
+    if (durationError) {
+      console.error('Error fetching durations:', durationError);
+    }
+
+    const totalReadingTime = durations?.reduce((sum, row) => sum + (row.duration || 0), 0) || 0;
+
+    return {
+      viewsCount: viewsCount || 0,
+      totalReadingTime,
+    };
+  };
+
+
+  const [viewsCount, setViewsCount] = useState(0)
+  const [readingSeconds, setReadingSeconds] = useState(0)
+
+  //live record in table(nva pr km eh v ni kr reha)
+  const lastSavedSeconds = useRef(0)
   useEffect(() => {
-    // Track reading time
+    const interval = setInterval(async () => {
+      const diff = readingSeconds - lastSavedSeconds.current
+      if (diff >= 30) {
+        lastSavedSeconds.current = readingSeconds
+
+        const { data: sessionData, error } = await supabase
+          .from('reading_sessions')
+          .upsert([
+            {
+              user_id: id,
+              book_id: bookId,
+              duration: readingSeconds,
+              started_at: new Date().toISOString(),
+            },
+          ])
+          .select()
+
+        if (error) {
+          console.error('Failed to update reading time:', error.message)
+        }
+      }
+    }, 10000) // check every 10s
+
+    return () => clearInterval(interval)
+  }, [readingSeconds])
+
+
+  useEffect(() => {
+    return () => {
+      endReadingSession(); // ✅ clean and correct
+    };
+  }, [readingSession, readingSeconds]);
+
+
+
+  //pta ni purna a eh 
+
+  useEffect(() => {
+    if (bookId) {
+      fetchReadingStats()
+        .then(stats => {
+          if (stats) {
+            setViewsCount(stats.viewsCount)
+            setReadingSeconds(stats.totalReadingTime)
+          }
+        })
+    }
+  }, [bookId]);
+
+  //LIVE timer 
+  useEffect(() => {
+    const startTime = Date.now()
+
     const interval = setInterval(() => {
-      setReadingTime(prev => prev + 1)
+      const elapsed = Math.floor((Date.now() - startTime) / 1000)
+      setReadingSeconds(prev => prev + 1)
     }, 1000)
 
     return () => clearInterval(interval)
   }, [])
 
+  function formatReadingTime(seconds: number): string {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}m ${secs < 10 ? '0' : ''}${secs}s`
+  }
+
+  //likes & review maybe 
   const fetchBook = async () => {
     try {
       const { data: bookData, error } = await supabase
         .from('books')
         .select(`
-          *,
-          authors:author_id (id, name, avatar_url),
-          chapters (id, title, content, chapter_number),
-          likes (id),
-          bookmarks (id),
-          views (id)
-        `)
+        *,
+        authors:author_id (id, name, avatar_url)
+      `)
         .eq('id', id)
         .single()
 
       if (error) throw error
 
+      const [{ data: likesData }, { data: reviewsData }] = await Promise.all([
+        supabase.from('likes').select('id').eq('book_id', id),
+        supabase.from('reviews').select('id').eq('book_id', id).not('content', 'is', null)
+
+      ])
       const formattedBook: Book = {
         ...bookData,
         author: bookData.authors,
-        likes: bookData.likes?.length || 0,
-        views: bookData.views?.length || 0,
-        chapters: bookData.chapters?.sort((a: any, b: any) => a.chapter_number - b.chapter_number) || []
+        likes: likesData?.length || 0,
+        reviews: reviewsData?.length || 0,
       }
-
       setBook(formattedBook)
-      
-      // Check if user has liked/bookmarked
       if (user) {
         const { data: likeData } = await supabase
           .from('likes')
           .select('id')
           .eq('book_id', id)
           .eq('user_id', user.id)
-          .single()
-        
-        const { data: bookmarkData } = await supabase
-          .from('bookmarks')
-          .select('id')
-          .eq('book_id', id)
-          .eq('user_id', user.id)
-          .single()
+          .maybeSingle()
 
         setIsLiked(!!likeData)
-        setIsBookmarked(!!bookmarkData)
       }
-
-      // Record view
-      await supabase.from('views').insert([{ book_id: id, user_id: user?.id }])
-      
-      await fetchComments()
-      setLoading(false)
-    } catch (error) {
-      console.error('Error fetching book:', error)
+      await fetchreviews()
+    } catch (err) {
+      console.error('Error fetching book:', err)
+    } finally {
       setLoading(false)
     }
   }
-
-  const fetchComments = async () => {
-    const { data, error } = await supabase
-      .from('comments')
-      .select(`
-        *,
-        users:user_id (name, avatar_url),
-        comment_likes (id)
-      `)
-      .eq('book_id', id)
-      .order('created_at', { ascending: false })
-
-    if (!error && data) {
-      const formattedComments = data.map(comment => ({
-        ...comment,
-        user: comment.users,
-        likes: comment.comment_likes?.length || 0
-      }))
-      setComments(formattedComments)
-    }
-  }
-
+  //like system
   const handleLike = async () => {
-    if (!user) return
+    if (!user || !book) return;
 
     if (isLiked) {
-      await supabase.from('likes').delete().eq('book_id', id).eq('user_id', user.id)
-      setIsLiked(false)
-    } else {
-      await supabase.from('likes').insert([{ book_id: id, user_id: user.id }])
-      setIsLiked(true)
+      toast({
+        title: "Already Liked",
+        description: "You've already liked this book.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const liked = !isLiked
+    setIsLiked(true);
+    setBook(prev => prev && {
+      ...prev,
+      likes: liked ? prev.likes + 1 : prev.likes - 1
+    })
+
+    try {
+      if (liked) {
+        await supabase.from('likes').insert([{ book_id: id, user_id: user.id }])
+      } else {
+        await supabase.from('likes').delete().eq('book_id', id).eq('user_id', user.id)
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error)
     }
   }
 
-  const handleBookmark = async () => {
-    if (!user) return
-
-    if (isBookmarked) {
-      await supabase.from('bookmarks').delete().eq('book_id', id).eq('user_id', user.id)
-      setIsBookmarked(false)
-    } else {
-      await supabase.from('bookmarks').insert([{ book_id: id, user_id: user.id }])
-      setIsBookmarked(true)
-    }
-  }
-
-  const handleComment = async () => {
-    if (!user || !newComment.trim()) return
-
-    const { error } = await supabase.from('comments').insert([{
-      book_id: id,
-      user_id: user.id,
-      content: newComment.trim()
-    }])
-
-    if (!error) {
-      setNewComment('')
-      await fetchComments()
-    }
-  }
-
-  const startTextToSpeech = () => {
-    if (!book?.chapters[currentChapter]) return
-
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(book.chapters[currentChapter].content)
-      utterance.rate = speechRate
-      utterance.onend = () => setIsPlaying(false)
-      
-      speechRef.current = utterance
-      speechSynthesis.speak(utterance)
-      setIsPlaying(true)
-    }
-  }
-
-  const stopTextToSpeech = () => {
-    speechSynthesis.cancel()
-    setIsPlaying(false)
-  }
-
+  // settings theme
   const getThemeClasses = () => {
     switch (theme) {
       case 'dark':
@@ -283,7 +376,7 @@ export default function ReadPage() {
         return 'bg-white text-gray-900'
     }
   }
-
+  // settings fontfamily
   const getFontFamily = () => {
     switch (fontFamily) {
       case 'sans':
@@ -295,14 +388,58 @@ export default function ReadPage() {
     }
   }
 
+  //review system fuction 
+
+  const fetchreviews = async () => {
+    if (!book) return;
+
+    const { data, error } = await supabase
+      .from('reviews')
+      .select(`
+      id,
+      content,
+      rating,
+      created_at,
+      user:user_id (
+        name,
+        avatar_url
+      )
+    `)
+      .eq('book_id', book.id)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching reviews:', error)
+      return
+    }
+
+    setreviews(data || [])
+  }
+  const handleComment = async () => {
+    if (!newComment.trim() || !user || !book) return;
+
+    const { error } = await supabase.from('reviews').insert([
+      {
+        book_id: book.id,
+        user_id: user.id,
+        content: newComment,
+      },
+    ])
+
+    if (error) {
+      console.error('Error posting comment:', error)
+      return
+    }
+    setNewComment('')
+    await fetchreviews()  // Refresh the reviews list
+  }
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-emerald-500"></div>
       </div>
     )
   }
-
   if (!book) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -313,13 +450,12 @@ export default function ReadPage() {
       </div>
     )
   }
-
   return (
     <div className={`min-h-screen transition-colors duration-300 ${getThemeClasses()}`}>
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b backdrop-blur-sm bg-opacity-90">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
+      <header className="sticky top-0 z-50 border-b  backdrop-blur-sm bg-opacity-90 ">
+        <div className="container mx-auto px-4 py-3 max-w-screen-xl">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
             <div className="flex items-center space-x-4">
               <Button variant="ghost" size="sm" onClick={() => router.push('/library')}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -331,16 +467,21 @@ export default function ReadPage() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               {/* Reading Stats */}
               <div className="hidden md:flex items-center space-x-4 text-sm opacity-70">
-                <div className="flex items-center space-x-1">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                  <p className="text-sm text-muted-foreground">
+                    ⏱ Time Spent: {formatReadingTime(readingSeconds)}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                   <Clock className="h-4 w-4" />
                   <span>{Math.floor(readingTime / 60)}m</span>
                 </div>
-                <div className="flex items-center space-x-1">
+                 <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                   <Eye className="h-4 w-4" />
-                  <span>{book.views}</span>
+                  <span>{viewsCount}</span>
                 </div>
               </div>
 
@@ -349,14 +490,9 @@ export default function ReadPage() {
                 <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
                 <span className="ml-1">{book.likes}</span>
               </Button>
-
-              <Button variant="ghost" size="sm" onClick={handleBookmark}>
-                <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-current' : ''}`} />
-              </Button>
-
-              <Button variant="ghost" size="sm" onClick={() => setShowComments(!showComments)}>
+              <Button variant="ghost" size="sm" onClick={() => setShowreviews(!showreviews)}>
                 <MessageSquare className="h-4 w-4" />
-                <span className="ml-1">{comments.length}</span>
+                <span className="ml-1">{book.reviews}</span>
               </Button>
 
               {/* Reading Settings */}
@@ -366,11 +502,11 @@ export default function ReadPage() {
                     <Settings className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Reading Settings</DialogTitle>
+                    <DialogTitle className='text-black'>Reading Settings</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-6">
+                  <div className="space-y-6 text-black">
                     {/* Font Size */}
                     <div>
                       <label className="text-sm font-medium mb-2 block">Font Size</label>
@@ -384,7 +520,6 @@ export default function ReadPage() {
                       />
                       <div className="text-xs text-gray-500 mt-1">{fontSize}px</div>
                     </div>
-
                     {/* Font Family */}
                     <div>
                       <label className="text-sm font-medium mb-2 block">Font Family</label>
@@ -399,7 +534,6 @@ export default function ReadPage() {
                         </SelectContent>
                       </Select>
                     </div>
-
                     {/* Theme */}
                     <div>
                       <label className="text-sm font-medium mb-2 block">Theme</label>
@@ -427,29 +561,6 @@ export default function ReadPage() {
                         </Button>
                       </div>
                     </div>
-
-                    {/* Text-to-Speech */}
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Text-to-Speech</label>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={isPlaying ? stopTextToSpeech : startTextToSpeech}
-                        >
-                          {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                        </Button>
-                        <Slider
-                          value={[speechRate]}
-                          onValueChange={(value) => setSpeechRate(value[0])}
-                          min={0.5}
-                          max={2}
-                          step={0.1}
-                          className="flex-1"
-                        />
-                        <span className="text-xs">{speechRate}x</span>
-                      </div>
-                    </div>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -457,78 +568,8 @@ export default function ReadPage() {
           </div>
         </div>
       </header>
-
       <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            {/* Chapter Navigation */}
-            {book.chapters.length > 1 && (
-              <div className="flex items-center justify-between mb-6">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentChapter(Math.max(0, currentChapter - 1))}
-                  disabled={currentChapter === 0}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Previous
-                </Button>
-                
-                <Select
-                  value={currentChapter.toString()}
-                  onValueChange={(value) => setCurrentChapter(parseInt(value))}
-                >
-                  <SelectTrigger className="w-64">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {book.chapters.map((chapter, index) => (
-                      <SelectItem key={chapter.id} value={index.toString()}>
-                        Chapter {chapter.chapter_number}: {chapter.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentChapter(Math.min(book.chapters.length - 1, currentChapter + 1))}
-                  disabled={currentChapter === book.chapters.length - 1}
-                >
-                  Next
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
-            )}
-
-            {/* Reading Content */}
-            <Card className="mb-8">
-              <CardContent className="p-8">
-                <div
-                  className={`prose max-w-none ${getFontFamily()}`}
-                  style={{
-                    fontSize: `${fontSize}px`,
-                    lineHeight: lineHeight,
-                  }}
-                >
-                  {book.chapters.length > 0 ? (
-                    <div>
-                      <h2 className="text-2xl font-bold mb-4">
-                        {book.chapters[currentChapter].title}
-                      </h2>
-                      <div className="whitespace-pre-wrap">
-                        {book.chapters[currentChapter].content}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="whitespace-pre-wrap">{book.description}</div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1">
             {/* Book Info */}
             <Card className="mb-6">
@@ -537,26 +578,30 @@ export default function ReadPage() {
                   <img
                     src={book.cover_url || '/placeholder.svg'}
                     alt={book.title}
-                    className="w-32 h-48 object-cover rounded-lg mx-auto mb-4"
+                    className="w-24 h-36 md:w-32 md:h-48 object-cover rounded-lg mx-auto mb-4"
                   />
                   <h3 className="font-bold text-lg">{book.title}</h3>
                   <p className="text-sm opacity-70 mb-2">by {book.author.name}</p>
                   <Badge variant="secondary">{book.genre}</Badge>
                 </div>
-
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
-                    <span>Chapters:</span>
-                    <span>{book.chapters.length}</span>
+                    <span>Views:</span>
+                    <span> {viewsCount}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Likes:</span>
                     <span>{book.likes}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Views:</span>
-                    <span>{book.views}</span>
+                    <span>Reviews:</span>
+                    <span>{book.reviews}</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span>Reading time:</span>
+                    <span> {(readingSeconds / 60).toFixed(1)} minutes</span>
+                  </div>
+
                   <div className="flex justify-between">
                     <span>Published:</span>
                     <span>{new Date(book.created_at).toLocaleDateString()}</span>
@@ -564,10 +609,9 @@ export default function ReadPage() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Comments Section */}
+            {/* reviews Section */}
             <AnimatePresence>
-              {showComments && (
+              {showreviews && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -575,24 +619,25 @@ export default function ReadPage() {
                 >
                   <Card>
                     <CardContent className="p-6">
-                      <h3 className="font-bold mb-4">Comments ({comments.length})</h3>
-                      
+                      <h3 className="font-bold mb-4">reviews ({reviews.length})</h3>
                       {/* Add Comment */}
                       <div className="mb-4">
                         <Textarea
                           placeholder="Share your thoughts..."
                           value={newComment}
                           onChange={(e) => setNewComment(e.target.value)}
+
                           className="mb-2"
                         />
-                        <Button onClick={handleComment} size="sm" className="w-full">
-                          Post Comment
-                        </Button>
+
+                        <Button onClick={handleComment}>Post Comment</Button> // ✅ RIGHT
+
+
                       </div>
 
-                      {/* Comments List */}
+                      {/* reviews List */}
                       <div className="space-y-4 max-h-96 overflow-y-auto">
-                        {comments.map((comment) => (
+                        {reviews.map((comment) => (
                           <div key={comment.id} className="border-b pb-3 last:border-b-0">
                             <div className="flex items-start space-x-3">
                               <Avatar className="w-8 h-8">
@@ -624,9 +669,48 @@ export default function ReadPage() {
               )}
             </AnimatePresence>
           </div>
+
+
+
+
+
+
+          {/* Main Content */}
+          <div className="lg:col-span-3">
+            {book?.pdf_url ? (
+              <PdfViewer
+                url={book.pdf_url}
+                fontSize={fontSize}
+                lineHeight={lineHeight}
+                theme={theme as 'light' | 'dark' | 'sepia'}
+              />
+            ) : book?.book_url ? (
+              <div className="w-full overflow-x-auto">
+                <iframe
+                  src={book.book_url}
+                  width="100%"
+                  height="800"
+                  className="rounded-lg shadow-lg border w-full"
+                />
+              </div>
+
+            ) : book?.content ? (
+              <div
+                className={`prose max-w-none transition-all duration-300 ${getFontFamily()} prose-sm sm:prose-base`}
+                style={{ fontSize: `${fontSize}px`, lineHeight }}
+                dangerouslySetInnerHTML={{ __html: book.content }}
+              />
+            ) : (
+              <p className="italic text-red-500">No readable content available for this book.</p>
+            )}
+          </div>
+
+
+          {/* Sidebar */}
+
         </div>
       </div>
-    </div>
+    </div >
   )
 }
 

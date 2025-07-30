@@ -14,6 +14,9 @@ const config: Config = {
 
 	theme: {
 		extend: {
+			fontFamily: {
+				handwriting: ['"Dancing Script"', 'cursive'],
+			},
 			colors: {
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
@@ -97,5 +100,6 @@ const config: Config = {
 	},
 	plugins: [require("tailwindcss-animate")],
 };
+
 
 export default config;
