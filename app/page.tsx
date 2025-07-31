@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import HeroSection from '@/components/home/HeroSection'
 import FeaturedStories from '@/components/home/FeaturedStories'
 import GenresSection from '@/components/home/GenresSection'
@@ -10,11 +11,41 @@ import MissionSection from '@/components/home/MissionSection'
 import HowItWorks from '@/components/home/HowItWorks'
 import Testimonials from '@/components/home/Testimonials'
 import LanguagesSection from '@/components/home/LanguagesSection'
-import AuthModal from '@/components/modals/AuthModal'
+//import { useAuthModal } from '@/components/modals/AuthModal'
+import { useAuthModal } from '@/context/AuthModalContext' 
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabaseClient'
 
 export default function HomePage() {
   const [prompt, setPrompt] = useState('')
   const [bgColor, setBgColor] = useState('#fefcf9')
+  
+//open modal for unauthenticated users 
+
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const { openModal } = useAuthModal()
+  const [checkedAuth, setCheckedAuth] = useState(false)
+
+  useEffect(() => {
+    const checkAuthAndOpenModal = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user && searchParams.get('authModal') === 'open') {
+        openModal()
+      }
+
+      // Optional: clean URL
+      if (searchParams.get('authModal') === 'open') {
+        router.replace('/', { scroll: false })
+      }
+
+      setCheckedAuth(true)
+    }
+
+    checkAuthAndOpenModal()
+  }, [searchParams])
+
+
 
   useEffect(() => {
     const interval = setInterval(() => {

@@ -270,20 +270,22 @@ export default function DashboardPage() {
 
 
   if (loading) {
-    return
+    return(
     <div className="flex justify-center items-center h-screen">
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Save Changes👌</h1>
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Back to Profile 🚀</h2>
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Loading Your Profile 🚀</h1>
+
       </div>
     </div>
+    );
   }
 
   if (!author) {
     return (
-      <div className="flex justify-center items-center h-screen text-center">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Sorry Bro😶‍🌫️</h1>
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">You are not loged in 💀💀</h2>
+      <div className="flex flex-col items-center justify-center  h-screen text-center">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">You didn't Write anything Yet!</h1>
+        <br></br>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">write Your First StoRY ✍️</h2>
       </div>
     )
   }

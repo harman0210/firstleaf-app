@@ -26,6 +26,12 @@ export default function WritePage() {
   const { id } = useParams()
   const router = useRouter()
   const { user } = useAuth()
+  // ⛔️ Redirect unauthenticated users
+  useEffect(() => {
+    if (!user) {
+      router.push("/") // ✅ update path if needed
+    }
+  }, [user])
 
   const [title, setTitle] = useState("")
   const [genre, setGenre] = useState("Uncategorized")
@@ -251,7 +257,7 @@ export default function WritePage() {
           <Select
             label="Genre"
             data={[
-             "Uncategorized",
+              "Uncategorized",
               "Fantasy",
               "Sci-Fi",
               "Romance",
@@ -274,19 +280,19 @@ export default function WritePage() {
               "Literature",
               "Other"
             ]}
-          value={genre}
-          onChange={(value) => setGenre(value || "Uncategorized")}
-          mb="sm"
-          disabled={loading}
-          placeholder="Choose a genre"
-          styles={{
-            dropdown: {
-              backgroundColor: "black", // dropdown background
-            },
-            input: {
-              color: "black", // selected value text color
-            },
-          }}
+            value={genre}
+            onChange={(value) => setGenre(value || "Uncategorized")}
+            mb="sm"
+            disabled={loading}
+            placeholder="Choose a genre"
+            styles={{
+              dropdown: {
+                backgroundColor: "black", // dropdown background
+              },
+              input: {
+                color: "black", // selected value text color
+              },
+            }}
           />
         </Paper>
         <Paper shadow="xs" p="md" mb="lg" withBorder>

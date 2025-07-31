@@ -11,6 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Languages, Loader2 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import Image from "next/image"
+//import { supabase } from "@/lib/supabaseClient"
+import { useAuth } from "@/lib/auth-context"
+
 
 
 const genres = [
@@ -43,14 +46,21 @@ export default function EditBookPage() {
   const { id } = useParams()
   const router = useRouter()
   const { toast } = useToast()
+    const { user } = useAuth()
 
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({ title: "", genre: "", language: "", description: "" , content:"" })
+  const [form, setForm] = useState({ title: "", genre: "", language: "", description: "", content: "" })
   const [authorName, setAuthorName] = useState("")
   const [coverPreview, setCoverPreview] = useState("")
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [authorId, setAuthorId] = useState("")
+ // const router = useRouter()
 
+  useEffect(() => {
+    if (!user) {
+      router.push("/") // ✅ update path if needed
+    }
+  }, [user])
 
   useEffect(() => {
     async function loadData() {
@@ -73,7 +83,7 @@ export default function EditBookPage() {
         .eq("id", book.author_id)
         .single()
 
-      setForm({ title: book.title, genre: book.genre, language: book.language, description: book.description ,content:book.content })
+      setForm({ title: book.title, genre: book.genre, language: book.language, description: book.description, content: book.content })
       setAuthorName(author?.name || "")
       setAuthorId(author?.id || "")
       setCoverPreview(book.cover_url || "")
@@ -118,7 +128,7 @@ export default function EditBookPage() {
         language: form.language,
         description: form.description,
         cover_url: newCoverUrl,
-        content:form.content
+        content: form.content
       })
       .eq("id", id)
       .select()
@@ -212,7 +222,7 @@ export default function EditBookPage() {
         )}
         <Input type="file" accept="image/*" onChange={handleCoverChange} />
       </div>
-          <div className="space-y-2">
+      <div className="space-y-2">
         <Label>
           Rewrite the content(book)
         </Label>
