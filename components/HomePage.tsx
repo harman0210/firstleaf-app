@@ -22,29 +22,7 @@ export default function HomePage() {
   
 //open modal for unauthenticated users 
 
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const { openModal } = useAuthModal()
-  const [checkedAuth, setCheckedAuth] = useState(false)
-
-  useEffect(() => {
-    const checkAuthAndOpenModal = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user && searchParams.get('authModal') === 'open') {
-        openModal()
-      }
-
-      // Optional: clean URL
-      if (searchParams.get('authModal') === 'open') {
-        router.replace('/', { scroll: false })
-      }
-
-      setCheckedAuth(true)
-    }
-
-    checkAuthAndOpenModal()
-  }, [searchParams])
-
+  
 
 
   useEffect(() => {
