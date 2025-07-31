@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Eye, EyeOff, MailCheck } from 'lucide-react'
 
 export default function AuthModal() {
   const { isOpen, closeModal } = useAuthModal()
@@ -16,23 +17,28 @@ export default function AuthModal() {
   const [isLogin, setIsLogin] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [step, setStep] = useState<'auth' | 'profile-setup'>('auth')
+  const [step, setStep] = useState<'auth' | 'confirmation' | 'profile-setup'>('auth')
 
   const [avatarUrl, setAvatarUrl] = useState('')
   const [file, setFile] = useState<File | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   const router = useRouter()
 
   const avatars = [
-    'https://avatars.dicebear.com/api/pixel-art-neutral/user1.svg',
-    'https://avatars.dicebear.com/api/pixel-art-neutral/user2.svg',
-    'https://avatars.dicebear.com/api/pixel-art-neutral/user3.svg',
-    'https://avatars.dicebear.com/api/pixel-art-neutral/user4.svg'
+    '/avatars/avatar.png',
+    '/avatars/avatar1.png',
+    '/avatars/avatar2.png',
+    '/avatars/avatar3.png',
+    '/avatars/avatar4.png',
+    '/avatars/avatar5.png'
   ]
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) closeModal()
+      if (user) {
+        setStep('profile-setup')
+      }
     })
   }, [])
 
@@ -48,18 +54,31 @@ export default function AuthModal() {
     setError('')
 
     if (isLogin) {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) setError(error.message)
-      else {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+
+      if (error) {
+        if (error.message.toLowerCase().includes('invalid login')) {
+          setError('Incorrect email or password. Try again or sign up.')
+        } else if (error.message.toLowerCase().includes('email not confirmed')) {
+          setError('Please confirm your email before logging in.')
+        } else {
+          setError(error.message)
+        }
+      } else {
         closeModal()
         router.refresh()
       }
     } else {
       const { data, error } = await supabase.auth.signUp({ email, password })
+
       if (error) {
-        setError(error.message)
+        if (error.message.includes('already registered')) {
+          setError('Email already registered. Try logging in instead.')
+        } else {
+          setError(error.message)
+        }
       } else {
-        setStep('profile-setup')
+        setStep('confirmation')
       }
     }
 
@@ -79,10 +98,7 @@ export default function AuthModal() {
       return ''
     }
 
-    const { publicUrl } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(fileName)
-
+    const { publicUrl } = supabase.storage.from('avatars').getPublicUrl(fileName)
     return publicUrl
   }
 
@@ -112,12 +128,10 @@ export default function AuthModal() {
       finalAvatarUrl = uploadedUrl
     }
 
-    // Save to users table
     await supabase.from('users').upsert([
       { id: user.id, name: name.trim(), avatar_url: finalAvatarUrl }
     ])
 
-    // ✅ Prevent duplicate author creation
     const { data: existingAuthor, error: authorCheckError } = await supabase
       .from('authors')
       .select('id')
@@ -142,6 +156,13 @@ export default function AuthModal() {
     }
   }
 
+  const getMailProviderLink = (email: string) => {
+    if (email.includes('@gmail.com')) return 'https://mail.google.com'
+    if (email.includes('@yahoo.com')) return 'https://mail.yahoo.com'
+    if (email.includes('@outlook.com')) return 'https://outlook.live.com'
+    return 'https://www.' + email.split('@')[1]
+  }
+
   if (!isOpen) return null
 
   return (
@@ -158,10 +179,11 @@ export default function AuthModal() {
           &times;
         </button>
 
+        {/* AUTH FORM */}
         {step === 'auth' && (
           <>
             <h1 className="text-2xl font-bold text-center">
-              {isLogin ? 'Please Login' : 'Create an Account'}
+              {isLogin ? 'Welcome Back' : 'Create an Account'}
             </h1>
 
             {error && <p className="text-red-600 text-sm text-center">{error}</p>}
@@ -183,13 +205,22 @@ export default function AuthModal() {
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
               />
-              <Input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-2.5 text-gray-500"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               <Button onClick={handleEmailAuth} className="w-full" disabled={loading}>
                 {isLogin ? 'Login with Email' : 'Sign Up with Email'}
               </Button>
@@ -207,7 +238,10 @@ export default function AuthModal() {
             <p className="text-center text-sm text-gray-500">
               {isLogin ? 'New here?' : 'Already have an account?'}{' '}
               <button
-                onClick={() => setIsLogin(!isLogin)}
+                onClick={() => {
+                  setIsLogin(!isLogin)
+                  setError('')
+                }}
                 className="text-indigo-600 underline"
               >
                 {isLogin ? 'Sign up' : 'Log in'}
@@ -216,6 +250,42 @@ export default function AuthModal() {
           </>
         )}
 
+        {/* CONFIRMATION STEP */}
+        {step === 'confirmation' && (
+          <div className="text-center space-y-4">
+            <MailCheck className="mx-auto text-green-600" size={48} />
+            <h2 className="text-xl font-semibold">Confirm Your Email</h2>
+            <p>
+            
+              A confirmation email has been sent to <strong>{email}</strong>. <br />
+              Please check your inbox and click the confirmation link.
+            </p>
+
+            <a
+              href={getMailProviderLink(email)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mt-2 text-indigo-600 underline font-medium"
+            >
+              Open your email provider
+            </a>
+
+            <p className="text-sm text-gray-500 mt-4">
+              Already confirmed?{' '}
+              <button
+                className="text-indigo-600 underline"
+                onClick={() => {
+                  setStep('auth')
+                  setIsLogin(true)
+                }}
+              >
+                Login now
+              </button>
+            </p>
+          </div>
+        )}
+
+        {/* PROFILE SETUP STEP */}
         {step === 'profile-setup' && (
           <>
             <h2 className="text-xl font-semibold text-center">Set up your avatar</h2>
@@ -258,7 +328,11 @@ export default function AuthModal() {
                 ))}
               </div>
 
-              <Button onClick={handleProfileSetup} className="w-full mt-4" disabled={loading}>
+              <Button
+                onClick={handleProfileSetup}
+                className="w-full mt-4"
+                disabled={loading}
+              >
                 Save and Continue
               </Button>
 
@@ -278,3 +352,4 @@ export default function AuthModal() {
     </Dialog>
   )
 }
+

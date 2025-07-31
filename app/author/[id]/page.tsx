@@ -126,17 +126,6 @@ export default function AuthorPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="border-b bg-white sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/library" className="flex items-center space-x-2">
-              <ArrowLeft className="h-5 w-5 text-gray-600" />
-              <BookOpen className="h-8 w-8 text-emerald-600" />
-              <span className="text-2xl font-bold text-gray-900">FirstLeaf</span>
-            </Link>
-          </div>
-        </div>
-      </nav>
 
       <div className="container mx-auto px-4 py-8">
         <Card className="mb-8">

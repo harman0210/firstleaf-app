@@ -120,13 +120,7 @@ export function UserNavBar() {
             ) : (
               <>
                 <button onClick={openModal} className="text-sm text-gray-900 hover:text-black">
-                  Login
-                </button>
-                <button
-                  onClick={openModal}
-                  className="text-sm text-gray-900 hover:text-black"
-                >
-                  Sign Up
+                  Login/signup
                 </button>
               </>
             )}
