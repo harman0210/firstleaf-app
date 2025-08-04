@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import Image from "next/image"
-import useAuthModal from "@/components/modals/AuthModal"
+import { useAuthModal } from "@/context/AuthModalContext";
 import { Card } from "@/components/ui/card"
 
 const genres = ["fantasy", "sci-fi", "romance", "mystery", "thriller", "literary-fiction", "young-adult", "non-fiction", "other"]
@@ -19,7 +19,8 @@ const genres = ["fantasy", "sci-fi", "romance", "mystery", "thriller", "literary
 export default function UploadPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const authModal = useAuthModal()
+  const { openModal } = useAuthModal();
+
 
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
@@ -37,49 +38,47 @@ export default function UploadPage() {
       } = await supabase.auth.getUser()
 
       if (!user || error) {
-
-        authModal.onOpen()
-        // router.push("/")
-
-        return
+        return openModal()
       }
 
-      setUserId(user.id)
+        setUserId(user.id)
 
-      const { data: author } = await supabase
-        .from("authors")
-        .select("*")
-        .eq("user_id", user.id)
-        .single()
-
-      if (author) {
-        setAuthorId(author.id)
-      } else {
-        const { data: newAuthor, error: createErr } = await supabase
+        const { data: author } = await supabase
           .from("authors")
-          .insert([
-            {
-              user_id: user.id,
-              name: user.user_metadata.name || user.email,
-              avatar_url: user.user_metadata.avatar_url || null,
-            },
-          ])
-          .select()
+          .select("*")
+          .eq("user_id", user.id)
           .single()
 
-        if (createErr || !newAuthor) {
-          toast({ title: "Failed to create author", variant: "destructive" })
-          return
+        if (author) {
+          setAuthorId(author.id)
+        } else {
+          const { data: newAuthor, error: createErr } = await supabase
+            .from("authors")
+            .insert([
+              {
+                user_id: user.id,
+                name: user.user_metadata.name || user.email,
+                avatar_url: user.user_metadata.avatar_url || null,
+              },
+            ])
+            .select()
+            .single()
+
+          if (createErr || !newAuthor) {
+            toast({ title: "Failed to create author", variant: "destructive" })
+            return
+          }
+
+          setAuthorId(newAuthor.id)
         }
 
-        setAuthorId(newAuthor.id)
+        setLoading(false)
       }
 
-      setLoading(false)
-    }
+      init()
+    }, [])
+  
 
-    init()
-  }, [])
 
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] || null
@@ -164,6 +163,7 @@ export default function UploadPage() {
   if (loading) {
     return (
       <div className="p-10 flex justify-center">
+        <h2 className="text-center text-black">YOUR BOOKS IS UPLOADING, PLEASE WAIT!</h2>
         <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
       </div>
     )
@@ -196,9 +196,13 @@ export default function UploadPage() {
               <SelectItem value="punjabi">Punjabi</SelectItem>
               <SelectItem value="english">English</SelectItem>
               <SelectItem value="hindi">Hindi</SelectItem>
-              <SelectItem value="spanish">Spanish</SelectItem>
-              <SelectItem value="telgu">Telgu</SelectItem>
               <SelectItem value="gujarati">Gujarati</SelectItem>
+              <SelectItem value="bengali">Bengali</SelectItem>
+              <SelectItem value="telugu">Telugu</SelectItem>
+              <SelectItem value="tamil">Tamil</SelectItem>
+              <SelectItem value="kannada">Kannada</SelectItem>
+              <SelectItem value="malayalam">Malayalam</SelectItem>
+              <SelectItem value="marathi">Marathi</SelectItem>
             </SelectContent>
           </Select>
         </div>

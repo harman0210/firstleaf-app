@@ -67,18 +67,14 @@ export default function WritingPrompt() {
   }
 
   return (
-    <section className="relative py-20 px-4 text-center overflow-hidden bg-gradient-to-br from-blue-50 to-white rounded-xl shadow-md mx-auto max-w-4xl">
+    <section id='write' className="relative py-20 px-4 text-center overflow-hidden bg-gradient-to-br from-blue-100 to-green-100 rounded-xl shadow-md mx-auto max-w-4xl">
       {/* Optional soft background pattern */}
-      <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl shadow-md mx-auto max-w-4xl"/>
-
-      <motion.h2
+   
+      <h2
         className="text-4xl font-extrabold text-gray-900 mb-4"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
+        >
         ✍️ Ready to Share Your Story?
-      </motion.h2>
+      </h2>
 
       <p className="text-gray-700 text-lg max-w-xl mx-auto mb-8">
         Unleash your creativity and draft your next big idea. Begin your writing journey today with just one click.

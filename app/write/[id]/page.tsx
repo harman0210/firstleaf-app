@@ -21,6 +21,7 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/lib/auth-context"
+import { useMemo } from "react";
 
 export default function WritePage() {
   const { id } = useParams()
@@ -43,6 +44,41 @@ export default function WritePage() {
   const [loading, setLoading] = useState(false)
   const [authorId, setAuthorId] = useState<string | null>(null)
   const [language, setLanguage] = useState<string | null>("english");
+
+  const genreOptions = useMemo(() => [
+    "Uncategorized",
+    "Fantasy",
+    "Sci-Fi",
+    "Romance",
+    "Fiction",
+    "Mystery",
+    "Horror",
+    "Poetry",
+    "Non-Fiction",
+    "Thriller",
+    "Drama",
+    "Adult",
+    "Folklore",
+    "Psychology",
+    "Memoir",
+    "Spiritual",
+    "Family",
+    "Nostalgia",
+    "Satire",
+    "Adventure",
+    "Literature",
+    "Other"
+  ], []);
+
+  const selectStyles = useMemo(() => ({
+    dropdown: {
+      backgroundColor: "black"
+    },
+    input: {
+      color: "black"
+    }
+  }), []);
+
 
 
   const editor = useEditor({
@@ -220,7 +256,7 @@ export default function WritePage() {
 
     <div className="relative min-h-screen">
       <div className="absolute inset-0 -z-10 h-full w-full">
-        <Image src="/moon.svg" alt="background" className="object-cover opacity-20" />
+        <Image src="/library.jpg" alt="background" className="object-cover opacity-20" />
       </div>
       <div className="max-w-4xl mx-auto p-4 text-black">
         <Title order={2} mb="md" className="text-white">Write Your Book</Title>
@@ -237,10 +273,13 @@ export default function WritePage() {
               { value: "punjabi", label: "Punjabi" },
               { value: "english", label: "English" },
               { value: "hindi", label: "Hindi" },
-              { value: "spanish", label: "Spanish" },
-              { value: "telgu", label: "Telgu" },
-              { value: "arabic", label: "Arabic" },
               { value: "gujarati", label: "Gujarati" },
+              { value: "bengali", label: "Bengali" },
+              { value: "telugu", label: "Telugu" },
+              { value: "tamil", label: "Tamil" },
+              { value: "kannada", label: "Kannada" },
+              { value: "malayalam", label: "Malayalam" },
+              { value: "marathi", label: "Marathi" },
             ]}
             value={language}
             onChange={(val) => setLanguage(val)}
@@ -256,44 +295,15 @@ export default function WritePage() {
           />
           <Select
             label="Genre"
-            data={[
-              "Uncategorized",
-              "Fantasy",
-              "Sci-Fi",
-              "Romance",
-              "Fiction",
-              "Mystery",
-              "Horror",
-              "Poetry",
-              "Non-Fiction",
-              "Thriller",
-              "Drama",
-              "Adult",
-              "Folklore",
-              "Psychology",
-              "Memoir",
-              "Spiritual",
-              "Family",
-              "Nostalgia",
-              "Satire",
-              "Adventure",
-              "Literature",
-              "Other"
-            ]}
+            data={genreOptions}
             value={genre}
             onChange={(value) => setGenre(value || "Uncategorized")}
             mb="sm"
             disabled={loading}
             placeholder="Choose a genre"
-            styles={{
-              dropdown: {
-                backgroundColor: "black", // dropdown background
-              },
-              input: {
-                color: "black", // selected value text color
-              },
-            }}
+            styles={selectStyles}
           />
+
         </Paper>
         <Paper shadow="xs" p="md" mb="lg" withBorder>
           <Title order={4} mb="sm">Upload Files</Title>

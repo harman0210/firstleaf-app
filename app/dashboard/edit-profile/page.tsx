@@ -121,7 +121,11 @@ export default function EditProfilePage() {
   }
 
   return (
+   
     <Box maw={480} mx="auto" py="xl" px="">
+          <div className="absolute inset-0 -z-10 h-full w-full">
+        <Image src="/blue-bg.png" alt="background" className="object-cover opacity-50" />
+      </div>
       <Title order={2} mb="xl" align="center">
         Edit Profile
       </Title>

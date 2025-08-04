@@ -183,11 +183,16 @@ export default function AuthModal() {
         {step === 'auth' && (
           <>
             <h1 className="text-2xl font-bold text-center">
-              {isLogin ? 'Welcome Back' : 'Create an Account'}
+              {isLogin ? 'Login/Signup' : 'Create an Account'}
             </h1>
-
             {error && <p className="text-red-600 text-sm text-center">{error}</p>}
-
+            <Button onClick={handleGoogleLogin} variant="outline" className="w-full">
+              Continue with Google
+            </Button>
+            <div className="relative text-center">
+              <span className="absolute left-0 top-1/2 w-full border-t border-gray-300 transform -translate-y-1/2"></span>
+              <span className="bg-white px-2 text-gray-500 relative z-10">or</span>
+            </div>
             <div className="space-y-4">
               {!isLogin && (
                 <Input
@@ -225,16 +230,6 @@ export default function AuthModal() {
                 {isLogin ? 'Login with Email' : 'Sign Up with Email'}
               </Button>
             </div>
-
-            <div className="relative text-center">
-              <span className="absolute left-0 top-1/2 w-full border-t border-gray-300 transform -translate-y-1/2"></span>
-              <span className="bg-white px-2 text-gray-500 relative z-10">or</span>
-            </div>
-
-            <Button onClick={handleGoogleLogin} variant="outline" className="w-full">
-              Continue with Google
-            </Button>
-
             <p className="text-center text-sm text-gray-500">
               {isLogin ? 'New here?' : 'Already have an account?'}{' '}
               <button
@@ -256,7 +251,7 @@ export default function AuthModal() {
             <MailCheck className="mx-auto text-green-600" size={48} />
             <h2 className="text-xl font-semibold">Confirm Your Email</h2>
             <p>
-            
+
               A confirmation email has been sent to <strong>{email}</strong>. <br />
               Please check your inbox and click the confirmation link.
             </p>
@@ -317,9 +312,8 @@ export default function AuthModal() {
                     key={url}
                     src={url}
                     alt="avatar option"
-                    className={`w-16 h-16 rounded-full cursor-pointer border-2 ${
-                      avatarUrl === url ? 'border-indigo-600' : 'border-transparent'
-                    }`}
+                    className={`w-16 h-16 rounded-full cursor-pointer border-2 ${avatarUrl === url ? 'border-indigo-600' : 'border-transparent'
+                      }`}
                     onClick={() => {
                       setAvatarUrl(url)
                       setFile(null)

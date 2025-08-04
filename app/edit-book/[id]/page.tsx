@@ -13,7 +13,7 @@ import { useToast } from "@/components/ui/use-toast"
 import Image from "next/image"
 //import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/lib/auth-context"
-
+import { useMemo } from "react";
 
 
 const genres = [
@@ -46,7 +46,7 @@ export default function EditBookPage() {
   const { id } = useParams()
   const router = useRouter()
   const { toast } = useToast()
-    const { user } = useAuth()
+  const { user } = useAuth()
 
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ title: "", genre: "", language: "", description: "", content: "" })
@@ -54,7 +54,7 @@ export default function EditBookPage() {
   const [coverPreview, setCoverPreview] = useState("")
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [authorId, setAuthorId] = useState("")
- // const router = useRouter()
+  // const router = useRouter()
 
   useEffect(() => {
     if (!user) {
@@ -188,12 +188,22 @@ export default function EditBookPage() {
           <SelectTrigger><SelectValue placeholder="Select language" /></SelectTrigger>
           <SelectContent>
             {[
-              "punjabi", "english", "hindi", "spanish", "gujarati", "telgu", "german"
-            ].map((lang) => (
-              <SelectItem key={lang} value={lang}>
-                {lang.charAt(0).toUpperCase() + lang.slice(1)}
-              </SelectItem>
-            ))}
+                "punjabi",
+                "english",
+                "hindi",
+                "gujarati",
+                "bengali",
+                "telugu",
+                "tamil",
+                "kannada",
+                "malayalam",
+                "marathi"
+
+              ].map((lang) => (
+                <SelectItem key={lang} value={lang}>
+                  {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       </div>

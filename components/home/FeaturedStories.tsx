@@ -13,6 +13,7 @@ interface Book {
   title: string
   language: string
   description: string
+  genre:string
   cover_url: string
 }
 
@@ -23,7 +24,7 @@ export default function FeaturedStories() {
     async function fetchFeaturedBooks() {
       const { data, error } = await supabase
         .from('books')
-        .select('id, title, description, cover_url,language')
+        .select('id, title, description, genre, cover_url,language')
         .order('created_at', { ascending: false })
         .limit(5)
 
@@ -39,7 +40,7 @@ export default function FeaturedStories() {
   }, [])
 
   return (
-    <section className="relative z-10 py-20 px-4 sm:px-6 md:px-10">
+    <section id='toppicks' className="relative z-10 py-20 px-4 sm:px-6 md:px-10">
       <h2 className="text-3xl sm:text-4xl font-bold text-center text-gray-900 dark:text-white font-serif mb-12 tracking-tight">
         ✨ Featured Stories
       </h2>
@@ -55,7 +56,7 @@ export default function FeaturedStories() {
         >
           {books.map((book) => (
             <SwiperSlide key={book.id}>
-              <div className="backdrop-blur-sm bg-white/70 dark:bg-zinc-900/70 p-6 sm:p-10 rounded-3xl shadow-xl border border-gray-200 dark:border-zinc-800 transition-all duration-300 hover:scale-[1.015]">
+              <div className="backdrop-blur-sm  bg-gradient-to-br from-blue-200 to-green-100 p-6 sm:p-10 rounded-3xl shadow-xl border hover:scale-[1.015]">
                 {book.cover_url && (
                   <div className="flex justify-center mb-6">
                     <div className="relative w-[400px] h-[320px] rounded-lg overflow-hidden shadow-lg">
@@ -72,6 +73,10 @@ export default function FeaturedStories() {
                   <h4 className="text-2xl sm:text-3xl font-bold mb-3 text-gray-900 dark:text-white tracking-tight ">
                     {book.title}
                   </h4>
+                   <p
+                    className='font-bold mb-3 text-gray-900 dark:text-white tracking-tigh'>
+                    {book.genre}
+                  </p>
                   <p
                     className='font-bold mb-3 text-gray-900 dark:text-white tracking-tigh'>
                     Language:

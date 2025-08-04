@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from 'next/navigation';
+
+
 
 interface Book {
   id: string;
@@ -21,7 +24,8 @@ interface Book {
   reviews: { rating: number }[];
 }
 
-export default function AdvancedSearch() {
+export default function AdvancedSearch({ closeSearch }: { closeSearch: () => void }) {
+
   const [query, setQuery] = useState("");
   const [genre, setGenre] = useState("");
   const [language, setLanguage] = useState<string>("")
@@ -30,6 +34,8 @@ export default function AdvancedSearch() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const pageSize = 10;
+  const router = useRouter();
+
 
   useEffect(() => {
     const fetchBooks = async () => {
@@ -83,7 +89,7 @@ export default function AdvancedSearch() {
 
   return (
     <div className="px-4 py-6 max-w-6xl mx-auto space-y-6 text-black">
-       <h1 className="text-3xl font-bold text-zinc-800 dark:text-white">Search Books</h1>
+      <h1 className="text-3xl font-bold text-zinc-800 dark:text-white">Search Books</h1>
       <div className="space-y-4 md:grid md:grid-cols-4 md:gap-6 md:space-y-0">
         {/* Filter Panel */}
         <div className="space-y-4 col-span-1">
@@ -118,9 +124,13 @@ export default function AdvancedSearch() {
               <option value="punjabi">Punjabi</option>
               <option value="english">English</option>
               <option value="hindi">Hindi</option>
-              <option value="spanish">Spanish</option>
-              <option value="french">French</option>
-              <option value="arabic">Arabic</option>
+              <option value="telugu">Telugu</option>
+              <option value="gujarati">Gujarati</option>
+              <option value="bengali">Bengali</option>
+              <option value="tamil">Tamil</option>
+              <option value="kannada">Kannada</option>
+              <option value="malayalam">Malayalam</option>
+              <option value="marathi">Marathi</option>
             </select>
           </div>
           <div>
@@ -181,7 +191,12 @@ export default function AdvancedSearch() {
                     <p className="text-xs mt-1 text-foreground">Language: {book.language || "-"}</p>
 
                   </CardContent>
-
+                  <Button className="mt-2 w-full" onClick={() => {
+                    closeSearch();             // Hide the overlay
+                    router.push(`/book/${book.id}`);  // Navigate to book page
+                  }}>
+                    Read Now
+                  </Button>
                 </Card>
               ))}
             </div>

@@ -146,9 +146,13 @@ export default function LibraryPage() {
               <SelectItem value="punjabi">Punjabi</SelectItem>
               <SelectItem value="english">English</SelectItem>
               <SelectItem value="hindi">Hindi</SelectItem>
-              <SelectItem value="spanish">Spanish</SelectItem>
-              <SelectItem value="telgu">Telgu</SelectItem>
               <SelectItem value="gujarati">Gujarati</SelectItem>
+              <SelectItem value="bengali">Bengali</SelectItem>
+              <SelectItem value="telugu">Telugu</SelectItem>
+              <SelectItem value="tamil">Tamil</SelectItem>
+              <SelectItem value="kannada">Kannada</SelectItem>
+              <SelectItem value="malayalam">Malayalam</SelectItem>
+              <SelectItem value="marathi">Marathi</SelectItem>
             </SelectContent>
           </Select>
 

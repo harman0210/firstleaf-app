@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import Newhome from '@/components/home/Newhome'
 import HeroSection from '@/components/home/HeroSection'
 import FeaturedStories from '@/components/home/FeaturedStories'
 import GenresSection from '@/components/home/GenresSection'
@@ -11,38 +11,25 @@ import MissionSection from '@/components/home/MissionSection'
 import HowItWorks from '@/components/home/HowItWorks'
 import Testimonials from '@/components/home/Testimonials'
 import LanguagesSection from '@/components/home/LanguagesSection'
-//import { useAuthModal } from '@/components/modals/AuthModal'
-import { useAuthModal } from '@/context/AuthModalContext' 
-import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabaseClient'
+import { useAuthModal } from '@/context/AuthModalContext'
 
 export default function HomePage() {
   const [prompt, setPrompt] = useState('')
-  const [bgColor, setBgColor] = useState('#fefcf9')
-  
-//open modal for unauthenticated users 
-
-  
-
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setBgColor(`hsl(${Math.random() * 360}, 70%, 95%)`)
-    }, 10000)
-    return () => clearInterval(interval)
-  }, [])
 
   useEffect(() => {
     setPrompt('Write a story about a world where dreams are shared.')
   }, [])
 
   return (
-    <main className="relative overflow-hidden transition-colors duration-1000" style={{ backgroundColor: bgColor }}>
+    <main
+      className="relative overflow-hidden"
+      style={{ backgroundColor: '#f5f5f5' }} // <-- soft pastel mint
+    >
       <HeroSection />
       <FeaturedStories />
-        <LanguagesSection />
+      <LanguagesSection />
       <GenresSection />
-      <WritingPrompt/>
+      <WritingPrompt />
       <AuthorSpotlight />
       <MissionSection />
       <HowItWorks />

@@ -42,13 +42,13 @@ export default function AuthorSpotlight() {
   }
 
   return (
-    <section className="relative z-10 py-24 px-6 bg-[#fdfcf9] dark:bg-[#121212]">
+    <section id='author' className="relative z-10 py-24 px-6  dark:bg-[#121212]">
       <div className="max-w-2xl mx-auto text-center">
         <h2 className="text-3xl font-serif font-bold mb-8 text-gray-800 dark:text-gray-100">
           Author Spotlight
         </h2>
 
-        <div className="bg-white dark:bg-[#1c1c1e] border border-gray-200 dark:border-gray-700 rounded-xl p-8 shadow-md">
+        <div className="bg-gradient-to-br from-blue-200 to-green-100 border border-gray-200 dark:border-gray-700 rounded-xl p-8 shadow-md">
           <Image
             src={author.avatar_url || '/avatar/avatar.png'}
             alt={author.name}

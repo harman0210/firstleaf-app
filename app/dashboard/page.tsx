@@ -294,7 +294,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gray-50">
       <main className="container mx-auto px-4 py-8">
         {/* Author Profile Card */}
-        <Card className="mb-8">
+        <Card className="mb-8 bg-[#c4ecc8]">
           <CardContent className="p-8 flex flex-col md:flex-row items-start space-y-6 md:space-y-0 md:space-x-8">
             <Avatar className="w-32 h-32">
 

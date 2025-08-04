@@ -3,16 +3,13 @@
 @tailwind utilities;
 @import "aos/dist/aos.css";
 
-
-body {
-  background-color: #df0e0e;
+html {
+  scroll-behavior: smooth;
 }
 
-.animated-lines {
-  background-image: radial-gradient(circle, rgba(0, 128, 128, 0.1) 1px, transparent 1px);
-  background-size: 30px 30px;
-  background-position: center;
-  animation: pulseBg 15s infinite linear;
+
+body {
+  background-color: #d6d6d6;
 }
 
 @keyframes pulseBg {
@@ -149,5 +146,18 @@ body {
   margin: 0 auto 20px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   border-radius: 8px;
+}
+
+.perspective {
+  perspective: 1500px;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+}
+.transform-style-preserve-3d {
+  transform-style: preserve-3d;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
 }
 

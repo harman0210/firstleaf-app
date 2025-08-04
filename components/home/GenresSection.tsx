@@ -17,7 +17,7 @@ const genres = [
 
 export default function GenresSection() {
   return (
-    <section className="relative z-10 py-24 px-6 bg-white dark:bg-zinc-950">
+    <section className="relative z-10 py-24 px-6  dark:bg-zinc-950">
       {/* Heading */}
       <h2 className="text-4xl sm:text-5xl font-serif font-bold mb-12 text-center text-gray-900 dark:text-white tracking-tight">
         📚 Explore Books by Genres
@@ -42,7 +42,7 @@ export default function GenresSection() {
                          font-medium text-lg transition-all duration-300 cursor-pointer"
               style={{
                 background:
-                  'linear-gradient(135deg, rgba(76, 41, 145, 0.2) 0%, rgba(3, 3, 52, 0.05) 100%)',
+                  'linear-gradient(135deg, #c4ecc8 10%, rgba(3, 3, 52, 0.05) 100%)',
               }}
             >
               <span>{genre.label}</span>

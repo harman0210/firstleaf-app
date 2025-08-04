@@ -19,19 +19,23 @@ import {
 
 const languages = [
   { label: '🌐 All Languages', value: 'All' },
-   { label: '🇮🇳 Punjabi', value: 'Punjabi' },
+  { label: '🇮🇳 Punjabi', value: 'Punjabi' },
   { label: '🇬🇧 English', value: 'English' },
   { label: '🇮🇳 Hindi', value: 'Hindi' },
   { label: '🇮🇳 Telugu', value: 'Telugu' },
   { label: '🇮🇳 Gujarati', value: 'Gujarati' },
-  { label: '🇪🇸 Spanish', value: 'Spanish' },
-  { label: '🇩🇪 German', value: 'German' }
+  { label: '🇮🇳 Bengali', value: 'Bengali' },
+  { label: '🇮🇳 Tamil', value: 'Tamil' },
+  { label: '🇮🇳 Kannada', value: 'Kannada' },
+  { label: '🇮🇳 Malayalam', value: 'Malayalam' },
+  { label: '🇮🇳 Marathi', value: 'Marathi' }
 ];
+
 
 
 export default function LanguagesSection() {
   return (
-    <section className="relative z-10 py-24 px-6 bg-white dark:bg-zinc-950">
+    <section className="relative z-10 py-24 px-6  dark:bg-zinc-950">
       {/* Heading */}
       <h2 className="text-4xl sm:text-5xl font-serif font-bold mb-12 text-center text-gray-900 dark:text-white tracking-tight">
         🌐 Explore Books by Languages
@@ -55,7 +59,7 @@ export default function LanguagesSection() {
                          font-medium text-lg transition-all duration-300 cursor-pointer"
               style={{
                 background:
-                  'linear-gradient(135deg, rgba(41, 145, 113, 0.2) 0%, rgba(3, 52, 20, 0.05) 100%)',
+                 'linear-gradient(135deg, #c4ecc8 10%, rgba(3, 3, 52, 0.05) 100%)',
               }}
             >
               <span>{language.value}</span>

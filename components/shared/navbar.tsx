@@ -1,145 +1,172 @@
 "use client";
+
 import { useState } from "react";
-import { useAuthModal } from "@/context/AuthModalContext";
 import Link from "next/link";
-import { useAuth } from "@/lib/auth-context";
+import { usePathname, useRouter } from "next/navigation";
+import { X, Search, Menu } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import AdvancedSearch from "@/components/search/AdvancedSearch";
-import { X, Search } from "lucide-react";
-import { usePathname } from 'next/navigation'
-import { supabase } from '@/lib/supabaseClient'
-import { motion } from 'framer-motion'
-import { Button } from '@/components/ui/button'
-import { useRouter } from 'next/navigation'
-import Image from 'next/image';
-
+import { Button } from "@/components/ui/button";
+import { useAuthModal } from "@/context/AuthModalContext";
+import { useAuth } from "@/lib/auth-context";
+import { supabase } from "@/lib/supabaseClient";
 
 export function UserNavBar() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user } = useAuth();
+  const { openModal } = useAuthModal();
 
   const [searchOpen, setSearchOpen] = useState(false);
-  const pathname = usePathname()
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  if (pathname.startsWith('/read/')) return null
+  if (pathname.startsWith("/read/")) return null;
 
-  const { user } = useAuth()
-  const router = useRouter()
-  const { openModal } = useAuthModal();
   const handleStartWriting = async () => {
-    if (!user) {
+    if (!user) return openModal();
 
-      //  alert("Please log in to start writing.")
-      return openModal();
-    }
+    let { data: author } = await supabase
+      .from("authors")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
 
-    let { data: author, error: authorError } = await supabase
-      .from('authors')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (authorError || !author) {
-      const { data: newAuthor, error: createAuthorError } = await supabase
-        .from('authors')
-        .insert([
-          {
-            user_id: user.id,
-            name: user.email || 'Unnamed Author',
-          },
-        ])
+    if (!author) {
+      const { data: newAuthor, error } = await supabase
+        .from("authors")
+        .insert([{ user_id: user.id, name: user.email || "Unnamed Author" }])
         .select()
-        .single()
+        .single();
 
-      if (createAuthorError || !newAuthor) {
-        console.error('Author creation failed:', createAuthorError)
-        alert("Failed to create author profile. Please try again.")
-        return
+      if (error || !newAuthor) {
+        alert("Failed to create author profile.");
+        return;
       }
 
-      author = newAuthor
+      author = newAuthor;
     }
 
     const { data: draft, error: draftError } = await supabase
-      .from('drafts')
+      .from("drafts")
       .insert([
         {
-          title: 'Untitled Draft',
-          content: '<p>Start writing your story...</p>',
+          title: "Untitled Draft",
+          content: "<p>Start writing your story...</p>",
           author_id: author.id,
-          status: 'draft',
+          status: "draft",
         },
       ])
       .select()
-      .single()
+      .single();
 
     if (draftError || !draft) {
-      console.error('Error creating draft:', draftError)
-      alert("Failed to create a new draft. Please try again.")
-      return
+      alert("Failed to create draft.");
+      return;
     }
 
-    router.push(`/write/${draft.id}`)
-  }
+    router.push(`/write/${draft.id}`);
+  };
+
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white backdrop-blur border-b border-gray-400 px-4 py-3">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
+      <header className="bg-white shadow-md fixed w-full z-50 top-0 left-0 text-black">
+        <div className="container mx-auto flex justify-between items-center px-4 py-4">
+          {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <Image src="/logos/offical-logo-g-wl.png" alt="Logo" width={150} height={50} />
-           {/*} <span className="text-2xl font-bold text-emerald-400 hover:text-cyan-400">
-              FirstLeaf
-            </span>*/}
+            <h1 className="text-2xl font-bold tracking-wide flex items-center gap-2 hover:text-emerald-600 transition-colors duration-300">
+              Firstleaf <span role="img" aria-label="book">📗</span>
+            </h1>
           </Link>
 
-          <div className="flex items-center gap-4">
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
             <button
               aria-label="Search"
               onClick={() => setSearchOpen(true)}
-              className="p-2 rounded-full text-gray-900 hover:text-black transition-colors"
+              className="text-gray-700 hover:text-black"
             >
               <Search size={20} />
             </button>
-            <Button variant="ghost" className="text-sm text-gray-900 hover:text-black"
-              onClick={handleStartWriting}
-            >
-              ✍️ Write
-            </Button>
-            <Link  href="/library" className="text-sm text-gray-900 hover:text-black">
-              Library
+            <Link href="/"
+              className="relative hover:text-emerald-600 transition-colors duration-300">Home</Link>
+            <button onClick={handleStartWriting}
+              className="relative hover:text-emerald-600 transition-colors duration-300">Write</button>
+            <Link
+              href="/library"
+              className="relative hover:text-emerald-600 transition-colors duration-300">Library
+              <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-emerald-500 transition-all group-hover:w-full duration-300"></span>
             </Link>
+            <Link href="/about"
+              className="relative hover:text-emerald-600 transition-colors duration-300"
+            >About</Link>
+            <Link href="/contact"
+              className="relative hover:text-emerald-600 transition-colors duration-300"
+            >Contact</Link>
             {user ? (
               <>
-                <Link href="/dashboard" className="text-sm text-gray-900 hover:text-black">
-                  Profile
-                </Link>
-                <Avatar className="h-8 w-8 bg-black-800 text-black border border-zinc-600 ">
+                <Link href="/dashboard"
+                  className="relative hover:text-emerald-600 transition-colors duration-300">Profile</Link>
+                <Avatar className="h-8 w-8 border">
                   <AvatarFallback>
                     {user?.email?.charAt(0)?.toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               </>
             ) : (
-              <>
-                <button onClick={openModal} className="text-sm text-gray-900 hover:text-black">
-                  Login/signup
-                </button>
-              </>
+              <button onClick={openModal}
+                className="relative hover:text-emerald-600 transition-colors duration-300">Login/Signup</button>
+            )}
+          </nav>
+
+          {/* Mobile Menu Button */}
+          <button
+            className="md:hidden text-gray-700"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            aria-label="Toggle menu"
+          >
+            {menuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+
+        {/* Mobile Nav Dropdown */}
+        {menuOpen && (
+          <div className="md:hidden bg-white border-t px-4 py-4 space-y-2">
+            <Link href="/" onClick={() => setMenuOpen(false)} className="block py-2 px-3 rounded hover:bg-gray-100 text-gray-800">Home</Link>
+            <Link href="/library" onClick={() => setMenuOpen(false)} className="block py-2 px-3 rounded hover:bg-gray-100 text-gray-800">Library</Link>
+            <Link href="/about" onClick={() => setMenuOpen(false)} className="block py-2 px-3 rounded hover:bg-gray-100 text-gray-800">About</Link>
+            <Link href="/contact" onClick={() => setMenuOpen(false)} className="block py-2 px-3 rounded hover:bg-gray-100 text-gray-800">Contact</Link>
+            {user ? (
+              <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="block py-2 px-3 rounded hover:bg-gray-100 text-gray-800">
+                Profile
+              </Link>
+            ) : (
+              <button
+                onClick={() => { setMenuOpen(false); openModal(); }}
+                className="block w-full text-left py-2 px-3 rounded hover:bg-gray-100 text-gray-800"
+              >
+                Login / Signup
+              </button>
             )}
           </div>
-        </div>
+        )}
+
       </header>
 
+      {/* Search Overlay */}
       {searchOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm z-50 flex flex-col">
-          <div className="p-4 flex items-center justify-between">
-            <button onClick={() => setSearchOpen(false)} className="text-white text-2xl">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex flex-col">
+          <div className="p-4 flex justify-between items-center text-white">
+            <span className="text-lg font-semibold">Search</span>
+            <button onClick={() => setSearchOpen(false)} aria-label="Close Search">
               <X size={24} />
             </button>
           </div>
-          <div className="flex-1 overflow-auto p-4 bg-white">
-            <AdvancedSearch />
+          <div className="bg-white p-4 flex-1 overflow-auto">
+            <AdvancedSearch closeSearch={() => setSearchOpen(false)} />
           </div>
         </div>
       )}
     </>
   );
 }
+

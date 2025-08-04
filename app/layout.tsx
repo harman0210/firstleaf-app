@@ -5,7 +5,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/lib/auth-context"
 import { UserNavBar } from "@/components/shared/navbar"
-import { Footer } from "@/components/shared/footer"
+import  Footer  from "@/components/shared/footer"
 import { AuthModalProvider } from "@/context/AuthModalContext"
 import AuthModal from "@/components/modals/AuthModal"
 import { AOSProvider } from "@/components/providers/AOSProvider"
@@ -66,14 +66,15 @@ export default function RootLayout({
   return (
 
     <html lang="en">
-      <body className={`bg-black text-white ${inter.className}`}>
+      <body className={`bg-[#c4ecc8]
+         text-white ${inter.className}`}>
         <MantineProvider defaultColorScheme="light">
           <Notifications position="top-right" zIndex={1000} autoClose={4000} />
           <AuthProvider>
             <AuthModalProvider>
-              <AOSProvider />
+              <AOSProvider />          
               <UserNavBar />
-              <main className="min-h-[80vh] px-4 sm:px-6">{children}</main>
+              <main className="min-h-[80vh] px-4 sm:px-6 pt-16 ">{children}</main>
               <Footer />
               <AuthModal />
             </AuthModalProvider>
