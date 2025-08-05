@@ -120,7 +120,7 @@ export default function Footer() {
           <ul className="space-y-2 text-sm">
             <li><Link href="/#author">Authors</Link></li>
             <li><Link href="/#toppicks">Top Picks</Link></li>
-            <li><Link href="/#reviews ">Reviews</Link></li>
+            <li><Link href="/#reviews">Reviews</Link></li>
           </ul>
         </div>
 
